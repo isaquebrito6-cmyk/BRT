@@ -1,6 +1,10 @@
 name = "cadastro-vencimentos-cf"
+main = "worker.js"
 compatibility_date = "2026-01-01"
-pages_build_output_dir = "."
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
