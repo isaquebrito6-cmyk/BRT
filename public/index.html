@@ -1466,7 +1466,7 @@ async function iniciarApp(){
   const thNome = document.querySelector('thead th[data-key="nome"] .arrow');
   if(thNome) thNome.textContent = '▲';
 
-  document.getElementById('bannerText').textContent = `Sessão ativa (${AUTH_ROLE === 'admin' ? 'administrador' : 'editor'})`;
+  document.getElementById('bannerText').textContent = 'Sessão ativa';
   document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
 
   document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
