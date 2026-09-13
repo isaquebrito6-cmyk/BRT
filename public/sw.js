@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vencimentos-cache-v1';
+const CACHE_NAME = 'vencimentos-cache-v2';
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/icon-512.png', '/icon-180.png'];
 
 self.addEventListener('install', (event) => {
@@ -18,8 +18,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Só cuida de requisições do próprio site; deixa fontes externas (Google Fonts etc.) passarem direto.
-  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) {
+  const url = new URL(event.request.url);
+  // Nunca guarda em cache chamadas de API — elas têm que sempre ir direto pro servidor,
+  // senão as alterações (colaboradores, histórico etc.) parecem não atualizar sem recarregar a página.
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+  // Só cuida do resto das requisições do próprio site; deixa fontes externas (Google Fonts etc.) passarem direto.
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
   event.respondWith(

@@ -187,23 +187,75 @@
   <div style="width:100%;max-width:360px;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:32px 28px;">
     <p class="brand-eyebrow" style="margin-bottom:6px;">VERZANI E SANDRINI · SEGURANÇA DO TRABALHO</p>
     <h1 style="font-family:'Oswald',sans-serif;font-size:22px;font-weight:600;margin:0 0 24px;">Cadastro de Vencimentos</h1>
-    <div class="field" style="margin-bottom:14px;">
-      <label>Usuário</label>
-      <input type="text" id="loginUsername" autocomplete="username">
+
+    <div id="loginFormBox">
+      <div class="field" style="margin-bottom:14px;">
+        <label>Usuário</label>
+        <input type="text" id="loginUsername" autocomplete="username">
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Senha</label>
+        <input type="password" id="loginPassword" autocomplete="current-password">
+      </div>
+      <div id="loginMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:12px;"></div>
+      <button class="btn primary" id="loginBtn" style="width:100%;justify-content:center;">Entrar</button>
+      <p style="text-align:center;margin-top:14px;">
+        <a href="#" id="showResetLink" style="font-size:12px;color:var(--amber);text-decoration:underline;">Esqueci minha senha</a>
+      </p>
+      <p id="loginBootstrapHint" style="font-size:11.5px;color:var(--text-dim);margin-top:16px;line-height:1.5;display:none;">
+        Ainda não existe nenhum usuário cadastrado. Ao entrar pela primeira vez, o usuário e senha digitados aqui viram a conta de <b style="color:var(--text)">administrador</b>.
+      </p>
     </div>
-    <div class="field" style="margin-bottom:8px;">
-      <label>Senha</label>
-      <input type="password" id="loginPassword" autocomplete="current-password">
+
+    <div id="resetFormBox" style="display:none;">
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;line-height:1.5;">Informe seu usuário, o <b style="color:var(--text)">código de recuperação</b> que você guardou quando criou a conta, e a nova senha.</p>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Usuário</label>
+        <input type="text" id="resetUsername" autocomplete="username">
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Código de recuperação</label>
+        <input type="text" id="resetCode" placeholder="XXXX-XXXX-XXXX" style="font-family:'IBM Plex Mono',monospace;">
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Nova senha (mín. 6 caracteres)</label>
+        <input type="password" id="resetNewPassword">
+      </div>
+      <div id="resetMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:12px;"></div>
+      <button class="btn primary" id="resetBtn" style="width:100%;justify-content:center;">Redefinir senha</button>
+      <p style="text-align:center;margin-top:14px;">
+        <a href="#" id="backToLoginLink" style="font-size:12px;color:var(--text-dim);text-decoration:underline;">Voltar para o login</a>
+      </p>
     </div>
-    <div id="loginMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:12px;"></div>
-    <button class="btn primary" id="loginBtn" style="width:100%;justify-content:center;">Entrar</button>
-    <p id="loginBootstrapHint" style="font-size:11.5px;color:var(--text-dim);margin-top:16px;line-height:1.5;display:none;">
-      Ainda não existe nenhum usuário cadastrado. Ao entrar pela primeira vez, o usuário e senha digitados aqui viram a conta de <b style="color:var(--text)">administrador</b>.
-    </p>
+  </div>
+</div>
+
+<div id="recoveryCodeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:420px;background:var(--bg-panel);border:2px solid var(--amber);border-radius:6px;padding:28px;">
+    <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0 0 12px;color:var(--amber);">⚠ Guarde seu código de recuperação</h2>
+    <p style="font-size:13px;color:var(--text-dim);line-height:1.5;margin:0 0 16px;">Esse código é a <b style="color:var(--text)">única forma de recuperar sua senha</b> se você esquecer. Anote e guarde num lugar seguro — ele não será mostrado de novo.</p>
+    <div id="recoveryCodeText" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--amber);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:4px;padding:16px;text-align:center;letter-spacing:0.05em;margin-bottom:20px;"></div>
+    <button class="btn primary" id="closeRecoveryModal" style="width:100%;justify-content:center;">Já anotei, continuar</button>
   </div>
 </div>
 
 <div id="appRoot" style="display:none;">
+
+<div id="adminResetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:250;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:360px;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
+    <h2 style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;margin:0 0 4px;">Redefinir senha</h2>
+    <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Usuário: <b id="adminResetTargetUser" style="color:var(--text);"></b></p>
+    <div class="field" style="margin-bottom:8px;">
+      <label>Nova senha (mín. 6 caracteres)</label>
+      <input type="password" id="adminResetNewPassword">
+    </div>
+    <div id="adminResetMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" id="adminResetCancel" style="flex:1;justify-content:center;">Cancelar</button>
+      <button class="btn primary" id="adminResetConfirm" style="flex:1;justify-content:center;">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <div id="usersModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;">
   <div style="width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
@@ -609,7 +661,7 @@ async function loadInitial(){
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
   HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao}));
-  updateSaveIndicator('Conectado (' + AUTH_USERNAME + ')');
+  updateSaveIndicator('Conectado');
 }
 
 async function refreshData(){
@@ -1299,10 +1351,13 @@ async function tentarLogin(){
   const btn = document.getElementById('loginBtn');
   btn.disabled = true;
   try{
-    await fazerLogin(username, password);
+    const data = await fazerLogin(username, password);
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appRoot').style.display = 'block';
     await iniciarApp();
+    if(data.bootstrap && data.recoveryCode){
+      mostrarCodigoRecuperacao(data.recoveryCode);
+    }
   }catch(err){
     const mapa = {
       invalid_credentials: 'Usuário ou senha incorretos.',
@@ -1310,6 +1365,54 @@ async function tentarLogin(){
       missing_credentials: 'Preencha usuário e senha.',
     };
     msgEl.textContent = mapa[err.message] || 'Não foi possível entrar. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function abrirModalRedefinirSenha(username){
+  document.getElementById('adminResetTargetUser').textContent = username;
+  document.getElementById('adminResetNewPassword').value = '';
+  document.getElementById('adminResetMsg').textContent = '';
+  document.getElementById('adminResetModal').dataset.username = username;
+  document.getElementById('adminResetModal').style.display = 'flex';
+}
+
+function mostrarCodigoRecuperacao(codigo){
+  document.getElementById('recoveryCodeText').textContent = codigo;
+  document.getElementById('recoveryCodeModal').style.display = 'flex';
+}
+
+async function tentarResetSenha(){
+  const username = document.getElementById('resetUsername').value.trim();
+  const recoveryCode = document.getElementById('resetCode').value.trim();
+  const newPassword = document.getElementById('resetNewPassword').value;
+  const msgEl = document.getElementById('resetMsg');
+  msgEl.textContent = '';
+  if(!username || !recoveryCode || !newPassword){ msgEl.textContent = 'Preencha todos os campos.'; return; }
+  if(newPassword.length < 6){ msgEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+  const btn = document.getElementById('resetBtn');
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, recoveryCode, newPassword})
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok){
+      const mapa = { codigo_invalido: 'Usuário ou código de recuperação incorretos.', password_too_short: 'A senha precisa ter pelo menos 6 caracteres.' };
+      msgEl.textContent = mapa[data.error] || 'Não foi possível redefinir a senha.';
+      return;
+    }
+    document.getElementById('resetFormBox').style.display = 'none';
+    document.getElementById('loginFormBox').style.display = 'block';
+    document.getElementById('loginUsername').value = username;
+    document.getElementById('loginPassword').value = '';
+    showToast('Senha redefinida! Já pode entrar com a nova senha.');
+    if(data.newRecoveryCode) mostrarCodigoRecuperacao(data.newRecoveryCode);
+  }catch(err){
+    msgEl.textContent = 'Não foi possível conectar ao servidor.';
   } finally {
     btn.disabled = false;
   }
@@ -1325,7 +1428,10 @@ async function carregarUsuarios(){
           <div style="font-weight:600;">${escapeHTML(u.username)}</div>
           <div style="font-size:11px;color:var(--text-dim);">${u.role === 'admin' ? 'Administrador' : 'Editor'}</div>
         </div>
-        ${u.username !== AUTH_USERNAME ? `<button class="icon-btn del" data-remove-user="${escapeHTML(u.username)}" title="Remover">✕</button>` : '<span style="font-size:11px;color:var(--text-dim);">(você)</span>'}
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn ghost" data-reset-pass-user="${escapeHTML(u.username)}" style="padding:4px 10px;font-size:12px;">Redefinir senha</button>
+          ${u.username !== AUTH_USERNAME ? `<button class="icon-btn del" data-remove-user="${escapeHTML(u.username)}" title="Remover">✕</button>` : '<span style="font-size:11px;color:var(--text-dim);">(você)</span>'}
+        </div>
       </div>`).join('');
     list.querySelectorAll('[data-remove-user]').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -1338,6 +1444,9 @@ async function carregarUsuarios(){
           showToast('Não foi possível remover: ' + err.message, 'error');
         }
       });
+    });
+    list.querySelectorAll('[data-reset-pass-user]').forEach(btn => {
+      btn.addEventListener('click', () => abrirModalRedefinirSenha(btn.dataset.resetPassUser));
     });
   }catch(err){
     showToast('Não foi possível carregar usuários: ' + err.message, 'error');
@@ -1357,7 +1466,7 @@ async function iniciarApp(){
   const thNome = document.querySelector('thead th[data-key="nome"] .arrow');
   if(thNome) thNome.textContent = '▲';
 
-  document.getElementById('bannerText').textContent = `Conectado como ${AUTH_USERNAME} (${AUTH_ROLE === 'admin' ? 'administrador' : 'editor'})`;
+  document.getElementById('bannerText').textContent = `Sessão ativa (${AUTH_ROLE === 'admin' ? 'administrador' : 'editor'})`;
   document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
 
   document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
@@ -1453,6 +1562,39 @@ async function init(){
   document.getElementById('loginBtn').addEventListener('click', tentarLogin);
   document.getElementById('loginPassword').addEventListener('keydown', (ev) => {
     if(ev.key === 'Enter') tentarLogin();
+  });
+  document.getElementById('showResetLink').addEventListener('click', (ev) => {
+    ev.preventDefault();
+    document.getElementById('loginFormBox').style.display = 'none';
+    document.getElementById('resetFormBox').style.display = 'block';
+  });
+  document.getElementById('backToLoginLink').addEventListener('click', (ev) => {
+    ev.preventDefault();
+    document.getElementById('resetFormBox').style.display = 'none';
+    document.getElementById('loginFormBox').style.display = 'block';
+  });
+  document.getElementById('resetBtn').addEventListener('click', tentarResetSenha);
+  document.getElementById('resetNewPassword').addEventListener('keydown', (ev) => {
+    if(ev.key === 'Enter') tentarResetSenha();
+  });
+  document.getElementById('closeRecoveryModal').addEventListener('click', () => {
+    document.getElementById('recoveryCodeModal').style.display = 'none';
+  });
+  document.getElementById('adminResetCancel').addEventListener('click', () => {
+    document.getElementById('adminResetModal').style.display = 'none';
+  });
+  document.getElementById('adminResetConfirm').addEventListener('click', async () => {
+    const username = document.getElementById('adminResetModal').dataset.username;
+    const newPassword = document.getElementById('adminResetNewPassword').value;
+    const msgEl = document.getElementById('adminResetMsg');
+    if(newPassword.length < 6){ msgEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+    try{
+      await apiFetch('/api/admin-reset-password', {method:'POST', body: JSON.stringify({username, newPassword})});
+      document.getElementById('adminResetModal').style.display = 'none';
+      showToast(`Senha de "${username}" redefinida.`);
+    }catch(err){
+      msgEl.textContent = 'Não foi possível redefinir: ' + err.message;
+    }
   });
 
   const temSessao = await carregarSessaoSalva();

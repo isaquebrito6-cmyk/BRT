@@ -1,4 +1,4 @@
-import { hashPassword, verifyPassword, makeSessionToken, getSession, json } from './lib/auth.js';
+import { hashPassword, verifyPassword, makeSessionToken, getSession, json, generateRecoveryCode } from './lib/auth.js';
 
 const PALETA = ['#f2b705', '#3fae5c', '#f2954a', '#e05a8a', '#8a6de0', '#4fa3e3', '#c94f4f', '#4fc9a8', '#c9a24f', '#7a8fd6'];
 
@@ -21,12 +21,14 @@ async function handleLogin(request, env) {
 
   if (count === 0) {
     const { hash, salt } = await hashPassword(password);
-    await db.prepare('INSERT INTO users (username, password_hash, password_salt, role) VALUES (?, ?, ?, ?)')
-      .bind(username, hash, salt, 'admin').run();
+    const recoveryCode = generateRecoveryCode();
+    const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(recoveryCode);
+    await db.prepare('INSERT INTO users (username, password_hash, password_salt, role, recovery_hash, recovery_salt) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(username, hash, salt, 'admin', recoveryHash, recoverySalt).run();
     await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
       .bind(username, 'Criou a conta de administrador (primeiro acesso)').run();
     const token = await makeSessionToken({ username, role: 'admin' }, secret);
-    return json({ token, username, role: 'admin', bootstrap: true });
+    return json({ token, username, role: 'admin', bootstrap: true, recoveryCode });
   }
 
   const { results } = await db.prepare('SELECT username, password_hash, password_salt, role FROM users WHERE username = ?')
@@ -184,11 +186,13 @@ async function handleUsers(request, env, url) {
     const { results: existing } = await db.prepare('SELECT username FROM users WHERE username = ?').bind(username).all();
     if (existing.length > 0) return json({ error: 'ja_existe' }, 409);
     const { hash, salt } = await hashPassword(password);
-    await db.prepare('INSERT INTO users (username, password_hash, password_salt, role) VALUES (?, ?, ?, ?)')
-      .bind(username, hash, salt, role).run();
+    const recoveryCode = generateRecoveryCode();
+    const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(recoveryCode);
+    await db.prepare('INSERT INTO users (username, password_hash, password_salt, role, recovery_hash, recovery_salt) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(username, hash, salt, role, recoveryHash, recoverySalt).run();
     await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
       .bind(session.username, `Adicionou o usuário "${username}" (${role})`).run();
-    return json({ ok: true });
+    return json({ ok: true, recoveryCode });
   }
 
   if (request.method === 'DELETE') {
@@ -208,12 +212,66 @@ async function handleUsers(request, env, url) {
   return json({ error: 'method_not_allowed' }, 405);
 }
 
+async function handleResetPassword(request, env) {
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'invalid_body' }, 400); }
+  const username = String(body.username || '').trim();
+  const recoveryCode = String(body.recoveryCode || '').trim().toUpperCase();
+  const newPassword = String(body.newPassword || '');
+  if (!username || !recoveryCode || !newPassword) return json({ error: 'missing_fields' }, 400);
+  if (newPassword.length < 6) return json({ error: 'password_too_short' }, 400);
+
+  const db = env.DB;
+  const { results } = await db.prepare('SELECT recovery_hash, recovery_salt FROM users WHERE username = ?').bind(username).all();
+  const user = results[0];
+  if (!user || !user.recovery_hash || !(await verifyPassword(recoveryCode, user.recovery_salt, user.recovery_hash))) {
+    return json({ error: 'codigo_invalido' }, 401);
+  }
+
+  const { hash, salt } = await hashPassword(newPassword);
+  const novoCodigo = generateRecoveryCode();
+  const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(novoCodigo);
+  await db.prepare('UPDATE users SET password_hash = ?, password_salt = ?, recovery_hash = ?, recovery_salt = ? WHERE username = ?')
+    .bind(hash, salt, recoveryHash, recoverySalt, username).run();
+  await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
+    .bind(username, 'Redefiniu a própria senha usando o código de recuperação').run();
+
+  return json({ ok: true, newRecoveryCode: novoCodigo });
+}
+
+async function handleAdminResetPassword(request, env) {
+  const session = await getSession(request, env.SESSION_SECRET);
+  if (!session) return json({ error: 'unauthorized' }, 401);
+  if (session.role !== 'admin') return json({ error: 'somente_admin' }, 403);
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'invalid_body' }, 400); }
+  const username = String(body.username || '').trim();
+  const newPassword = String(body.newPassword || '');
+  if (!username || newPassword.length < 6) return json({ error: 'dados_invalidos' }, 400);
+
+  const db = env.DB;
+  const { results } = await db.prepare('SELECT username FROM users WHERE username = ?').bind(username).all();
+  if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
+
+  const { hash, salt } = await hashPassword(newPassword);
+  await db.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE username = ?').bind(hash, salt, username).run();
+  await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
+    .bind(session.username, `Redefiniu a senha do usuário "${username}"`).run();
+
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
     try {
       if (p === '/api/login') return await handleLogin(request, env);
+      if (p === '/api/reset-password') return await handleResetPassword(request, env);
+      if (p === '/api/admin-reset-password') return await handleAdminResetPassword(request, env);
       if (p === '/api/data') return await handleData(request, env);
       if (p === '/api/colaborador') return await handleColaborador(request, env, url);
       if (p === '/api/doctype') return await handleDoctype(request, env, url);
