@@ -1,0 +1,8 @@
+name = "cadastro-vencimentos-vs"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cadastro-vencimentos-db"
+database_id = "9b0c7ffc-c85f-49fc-8c2f-2e5d7fcd99ee"

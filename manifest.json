@@ -1,0 +1,16 @@
+{
+  "name": "Cadastro de Vencimentos — Verzani e Sandrini",
+  "short_name": "Vencimentos",
+  "description": "Controle de ASO e NRs — Segurança do Trabalho",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#15171a",
+  "theme_color": "#15171a",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

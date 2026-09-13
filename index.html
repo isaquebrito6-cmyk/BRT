@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Vencimentos · ASO &amp; NRs — Verzani e Sandrini</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2315171a'/%3E%3Cpath d='M32 10 L58 54 L6 54 Z' fill='none' stroke='%23f2b705' stroke-width='5' stroke-linejoin='round'/%3E%3Crect x='29' y='26' width='6' height='16' rx='2' fill='%23f2b705'/%3E%3Crect x='29' y='45' width='6' height='6' rx='2' fill='%23f2b705'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#15171a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vencimentos">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15171a; --bg-panel:#1c1f23; --bg-panel-2:#22262b; --line:#33383e;
+    --text:#eceae4; --text-dim:#9aa0a8;
+    --amber:#f2b705; --amber-dim:#c99a06;
+    --red:#e2483a; --orange:#f2954a; --green:#3fae5c; --gray:#6b7280; --gray-dim:#2a2d31;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0) 200px),
+      repeating-linear-gradient(135deg, rgba(242,183,5,0.025) 0px, rgba(242,183,5,0.025) 2px, transparent 2px, transparent 14px),
+      var(--bg);
+    color:var(--text); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--amber);color:#15171a;}
+  .hazard-strip{height:10px;background:repeating-linear-gradient(135deg, var(--amber) 0 18px, #15171a 18px 36px);}
+
+  header.top{
+    padding:30px 40px 22px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;
+  }
+  .brand-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);margin:0 0 10px;}
+  h1.brand-title{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;font-size:clamp(24px,3vw,36px);margin:0;line-height:1.05;}
+  .brand-title .thin{font-weight:400;color:var(--text-dim);}
+  .top-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);text-align:right;line-height:1.7;}
+  .top-meta b{color:var(--text);font-weight:600;}
+
+  main{padding:28px 40px 90px;max-width:1400px;margin:0 auto;}
+
+  /* BANNER PERSISTENCE NOTICE */
+  .banner{
+    display:flex; gap:14px; align-items:flex-start;
+    background:linear-gradient(90deg, rgba(242,183,5,0.10), rgba(242,183,5,0.03));
+    border:1px solid var(--amber-dim); border-left:4px solid var(--amber);
+    border-radius:var(--radius); padding:14px 18px; margin-bottom:28px;
+    font-size:13px; color:var(--text-dim); line-height:1.55;
+  }
+  .banner .ico{font-size:20px;flex:none;margin-top:1px;}
+  .banner b{color:var(--text);}
+  .banner .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .banner.banner-danger{background:linear-gradient(90deg, rgba(226,72,58,0.14), rgba(226,72,58,0.03));border-color:var(--red);border-left-color:var(--red);}
+  .banner.banner-warn{background:linear-gradient(90deg, rgba(242,149,74,0.14), rgba(242,149,74,0.03));border-color:var(--orange);border-left-color:var(--orange);}
+
+  /* TOOLBAR */
+  .toolbar{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid var(--line);
+  }
+  .toolbar .grow{flex:1;min-width:180px;}
+  select, input[type=text], input[type=date], .btn{
+    background:var(--bg-panel-2); border:1px solid var(--line); color:var(--text);
+    padding:9px 12px; border-radius:var(--radius); font-family:'Inter',sans-serif; font-size:13px;
+  }
+  input:focus, select:focus{outline:1px solid var(--amber);border-color:var(--amber);}
+  button:focus-visible, [role="button"]:focus-visible{outline:2px solid var(--amber);outline-offset:1px;}
+  .btn{font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;}
+  .btn:hover{border-color:var(--amber-dim);color:var(--amber);}
+  .btn.primary{background:var(--amber);color:#15171a;border-color:var(--amber);}
+  .btn.primary:hover{background:#ffcb2b;color:#15171a;}
+  .btn.danger:hover{border-color:var(--red);color:var(--red);}
+  .btn.ghost{background:transparent;}
+  .btn[disabled]{opacity:0.4;cursor:not-allowed;}
+  input[type=file]{display:none;}
+
+  .search-box{position:relative;}
+  .search-box input{width:100%;padding-left:34px;}
+  .search-box::before{content:'⚲';position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:14px;}
+
+  /* KPI ROW */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:30px;}
+  .kpi{background:var(--bg-panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px;position:relative;overflow:hidden;}
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--bar,var(--amber));}
+  .kpi .num{font-family:'Oswald',sans-serif;font-size:32px;font-weight:600;line-height:1;}
+  .kpi .lbl{margin-top:6px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dim);font-weight:600;}
+  .kpi.k-total{--bar:#c99a06; background:rgba(242,183,5,0.06); border-color:rgba(242,183,5,0.25);}
+  .kpi.k-vencido{--bar:var(--red); background:rgba(226,72,58,0.09); border-color:rgba(226,72,58,0.3);}
+  .kpi.k-avencer{--bar:var(--orange); background:rgba(242,149,74,0.09); border-color:rgba(242,149,74,0.3);}
+  .kpi.k-valido{--bar:var(--green); background:rgba(63,174,92,0.08); border-color:rgba(63,174,92,0.28);}
+  .kpi.k-sem{--bar:var(--gray); background:rgba(107,114,128,0.08); border-color:rgba(107,114,128,0.3);}
+  .kpi.k-vencido .num{color:var(--red);} .kpi.k-avencer .num{color:var(--orange);} .kpi.k-valido .num{color:var(--green);}
+
+  .section-head{display:flex;align-items:baseline;gap:14px;margin:38px 0 14px;}
+  .section-head .idx{font-family:'IBM Plex Mono',monospace;color:var(--amber);font-size:13px;border:1px solid var(--amber-dim);padding:2px 8px;border-radius:2px;}
+  .section-head h2{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:18px;letter-spacing:0.03em;margin:0;font-weight:600;}
+  .section-head .line{flex:1;height:1px;background:var(--line);}
+  .section-sub{color:var(--text-dim);font-size:13px;margin:-6px 0 16px;}
+
+  /* TABLE */
+  .table-wrap{border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto;overflow-y:hidden;background:var(--bg-panel);-webkit-overflow-scrolling:touch;}
+  .table-wrap table{min-width:760px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;font-size:10.5px;letter-spacing:0.05em;
+    color:var(--text-dim);padding:12px 10px;border-bottom:1px solid var(--line);background:var(--bg-panel-2);white-space:nowrap;
+    cursor:pointer;user-select:none;
+  }
+  thead th:hover{color:var(--amber);}
+  thead th .arrow{opacity:0.4;margin-left:3px;}
+  thead th.no-sort{cursor:default;}
+  thead th.no-sort:hover{color:var(--text-dim);}
+  tbody tr{border-bottom:1px solid var(--line);}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--bg-panel-2);}
+  td{padding:10px 10px;vertical-align:middle;}
+  td.nm-cell{font-weight:600;}
+  .flag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--amber);border:1px solid var(--amber-dim);padding:1px 5px;border-radius:2px;margin-left:8px;text-transform:uppercase;}
+  .status-pill{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:3px 8px;border-radius:2px;white-space:nowrap;}
+  .chips-cell{display:flex;gap:4px;flex-wrap:wrap;}
+  .doc-chip{min-width:26px;height:28px;padding:2px 4px;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-family:'IBM Plex Mono',monospace;color:#15171a;position:relative;white-space:nowrap;line-height:1;}
+  .doc-chip .chip-top{font-size:6.5px;font-weight:700;letter-spacing:0.02em;opacity:0.85;}
+  .doc-chip .chip-bottom{font-size:9px;font-weight:800;}
+  .doc-chip.sr{width:20px;height:28px;padding:0;color:var(--text-dim);background:var(--gray-dim);border:1px dashed var(--line);}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{
+    width:28px;height:28px;border-radius:2px;border:1px solid var(--line);background:var(--bg-panel-2);
+    color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;
+  }
+  .icon-btn:hover{border-color:var(--amber-dim);color:var(--amber);}
+  .icon-btn.del:hover{border-color:var(--red);color:var(--red);}
+
+  .edit-row td{background:#181a1d;padding:18px 20px 22px;}
+  .edit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:14px;}
+  .field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-dim);margin-bottom:5px;font-weight:600;}
+  .field input{width:100%;}
+  .field.wide{grid-column:span 2;}
+  .edit-actions{display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line);padding-top:14px;margin-top:6px;}
+  .clear-date{font-size:11px;color:var(--text-dim);cursor:pointer;margin-top:4px;display:inline-block;}
+  .clear-date:hover{color:var(--amber);}
+
+  .empty-state{padding:60px 20px;text-align:center;color:var(--text-dim);}
+  .empty-state .big{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:20px;color:var(--text);margin-bottom:8px;}
+
+  .alert-item{display:flex;align-items:center;gap:12px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:13px;}
+  .alert-item:last-child{border-bottom:none;}
+  .alert-item .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .alert-item .nm{flex:1;font-weight:500;color:var(--text);background:none;border:none;text-align:left;padding:0;font-family:inherit;font-size:13px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  .alert-item .nm:hover{color:var(--amber);text-decoration:underline;}
+  .alert-item .doc{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);flex:none;}
+  .alert-item .days{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:2px 7px;border-radius:2px;white-space:nowrap;flex:none;}
+
+  .count-pill{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);padding:9px 4px;}
+
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--text-dim);font-size:11.5px;font-family:'IBM Plex Mono',monospace;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--bg-panel);border:1px solid var(--amber-dim);
+    border-left:4px solid var(--amber);color:var(--text);padding:12px 18px;border-radius:var(--radius);
+    font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100;
+    opacity:0;transform:translateY(10px);transition:all 0.25s;pointer-events:none;
+    display:flex;align-items:center;gap:14px;
+  }
+  .toast.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+  .toast.error{border-color:var(--red);border-left-color:var(--red);}
+  .toast .toast-action{background:none;border:none;color:var(--amber);font-weight:700;font-size:13px;cursor:pointer;padding:0;font-family:inherit;text-decoration:underline;white-space:nowrap;}
+
+  @media(max-width:900px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    header.top{padding:22px 18px;} main{padding:22px 18px 60px;}
+    .top-meta{text-align:left;}
+  }
+  @media print{ body{background:#fff;color:#000;} .toolbar,.banner,.row-actions{display:none;} }
+</style>
+</head>
+<body>
+<div class="hazard-strip"></div>
+
+<div id="loginScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:360px;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:32px 28px;">
+    <p class="brand-eyebrow" style="margin-bottom:6px;">VERZANI E SANDRINI · SEGURANÇA DO TRABALHO</p>
+    <h1 style="font-family:'Oswald',sans-serif;font-size:22px;font-weight:600;margin:0 0 24px;">Cadastro de Vencimentos</h1>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Usuário</label>
+      <input type="text" id="loginUsername" autocomplete="username">
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <label>Senha</label>
+      <input type="password" id="loginPassword" autocomplete="current-password">
+    </div>
+    <div id="loginMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:12px;"></div>
+    <button class="btn primary" id="loginBtn" style="width:100%;justify-content:center;">Entrar</button>
+    <p id="loginBootstrapHint" style="font-size:11.5px;color:var(--text-dim);margin-top:16px;line-height:1.5;display:none;">
+      Ainda não existe nenhum usuário cadastrado. Ao entrar pela primeira vez, o usuário e senha digitados aqui viram a conta de <b style="color:var(--text)">administrador</b>.
+    </p>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+
+<div id="usersModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;">Gerenciar usuários</h2>
+      <button id="closeUsersModal" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div id="usersList" style="margin-bottom:20px;"></div>
+    <div style="border-top:1px solid var(--line);padding-top:16px;">
+      <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;">Adicionar novo usuário</p>
+      <div class="edit-grid" style="margin-bottom:10px;">
+        <div class="field"><label>Usuário</label><input type="text" id="newUserUsername"></div>
+        <div class="field"><label>Senha (mín. 6 caracteres)</label><input type="password" id="newUserPassword"></div>
+        <div class="field">
+          <label>Papel</label>
+          <select id="newUserRole"><option value="editor">Editor (edita)</option><option value="admin">Administrador</option></select>
+        </div>
+      </div>
+      <div id="newUserMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
+      <button class="btn primary" id="addUserBtn">+ Adicionar usuário</button>
+    </div>
+  </div>
+</div>
+
+<header class="top">
+  <div>
+    <p class="brand-eyebrow">
+      <input type="text" id="empresaInput" value="Verzani e Sandrini" title="Clique para editar o nome da empresa" style="background:transparent;border:none;border-bottom:1px dashed var(--amber-dim);color:var(--amber);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;padding:0 2px 2px;width:auto;min-width:160px;">
+      · SEGURANÇA DO TRABALHO
+    </p>
+    <h1 class="brand-title">Cadastro de Vencimentos<br><span class="thin">ASO &amp; NRs — Edição</span></h1>
+  </div>
+  <div class="top-meta">
+    HOJE: <b id="metaHoje">—</b><br>
+    COLABORADORES: <b id="metaTotal">—</b><br>
+    SALVAMENTO: <b id="metaSaveStatus">—</b>
+  </div>
+</header>
+
+<main>
+  <div class="banner" id="alertBanner" style="display:none;">
+    <span class="ico" id="alertIco">🔔</span>
+    <div style="width:100%;min-width:0;">
+      <span id="alertSummary"></span>
+      <div id="alertList" style="margin-top:8px;border-top:1px solid var(--line);max-height:220px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;"></div>
+    </div>
+  </div>
+
+  <div class="banner" id="saveBanner" style="align-items:center;">
+    <span class="ico" id="saveIco">🟢</span>
+    <div style="width:100%;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <span id="bannerText">Conectado</span>
+      <div class="actions" style="margin:0;">
+        <button class="btn" id="manageUsersBtn" style="display:none;">👤 Gerenciar usuários</button>
+        <button class="btn" id="logoutBtn">Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head"><span class="idx">00</span><h2>Central de Avisos</h2><span class="line"></span></div>
+  <p class="section-sub">Configure com quantos dias de antecedência você quer ser avisado. O aviso aparece sempre no topo da página e, opcionalmente, como notificação do navegador.</p>
+  <div class="panel" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:3px;padding:18px 20px;margin-bottom:10px;">
+    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field">
+        <label>Avisar quando faltar</label>
+        <input type="number" id="avisoDiasInput" min="1" max="180" value="30" style="width:90px;"> <span style="color:var(--text-dim);font-size:12px;">dias para o vencimento</span>
+      </div>
+      <button class="btn" id="notifBtn">🔔 Ativar aviso no navegador</button>
+      <span id="notifStatus" style="font-size:12px;color:var(--text-dim);"></span>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin:14px 0 0;line-height:1.6;">
+      <b style="color:var(--text)">Como o aviso funciona:</b><br>
+      • <b style="color:var(--text)">Banner no topo</b>: sempre que houver algo vencido ou dentro do prazo configurado, um aviso colorido aparece no topo desta página, assim que você abrir.<br>
+      • <b style="color:var(--text)">Notificação do navegador</b> (opcional): além do banner, mostra um pop-up do sistema ao abrir a página. Depende do navegador permitir notificações neste ambiente — pode não funcionar em todo lugar.
+    </p>
+  </div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="section-head"><span class="idx">01</span><h2>Painel por Documento</h2><span class="line"></span></div>
+  <p class="section-sub">Situação individual de cada tipo de documento, com os próximos vencimentos específicos daquele documento.</p>
+  <div class="doc-panel-grid" id="docPanel" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;"></div>
+
+  <div class="section-head"><span class="idx">02</span><h2>Cadastro de Colaboradores</h2><span class="line"></span></div>
+  <p class="section-sub">Adicione colaboradores, edite as datas de cada documento e o status é recalculado automaticamente pela data de hoje.</p>
+
+  <div class="toolbar">
+    <button class="btn primary" id="addBtn">＋ Novo colaborador</button>
+    <div class="search-box grow"><input id="searchInput" type="text" placeholder="Buscar colaborador... (atalho: /)"></div>
+    <select id="statusFilter">
+      <option value="">Status: todos</option>
+      <option value="vencido">Vencido</option>
+      <option value="a_vencer">A vencer (conforme aviso)</option>
+      <option value="valido">Válido</option>
+      <option value="sem_registro">Sem registro</option>
+    </select>
+    <select id="docFilter">
+      <option value="">Documento: todos</option>
+    </select>
+    <button class="btn" id="exportCsvBtn">⬇ Exportar CSV</button>
+    <button class="btn" id="printBtn">🖨 Imprimir / PDF</button>
+    <span class="count-pill" id="rowCount"></span>
+  </div>
+
+  <div class="table-wrap" id="tabelaColaboradores">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th data-key="nome" scope="col">Colaborador <span class="arrow"></span></th>
+          <th data-key="status_geral" scope="col">Status geral <span class="arrow"></span></th>
+          <th class="no-sort" scope="col">Documentos</th>
+          <th data-key="proxVenc" scope="col">Próximo vencimento <span class="arrow"></span></th>
+          <th class="no-sort" scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section-head"><span class="idx">03</span><h2>Índice de Documentos</h2><span class="line"></span></div>
+  <p class="section-sub">Clique no ✕ de um cartão para excluir aquele tipo de documento. Use o formulário abaixo para incluir uma nova NR — ela entra automaticamente na posição certa, em ordem numérica.</p>
+  <div class="legend-grid" id="docLegend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:14px;"></div>
+
+  <div class="panel" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:3px;padding:16px 18px;">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="width:130px;">
+        <label>Sigla da NR</label>
+        <input type="text" id="novoDocSigla" placeholder="ex.: NR-12">
+      </div>
+      <div class="field" style="flex:1;min-width:220px;">
+        <label>Descrição</label>
+        <input type="text" id="novoDocNome" placeholder="ex.: Segurança em Máquinas e Equipamentos">
+      </div>
+      <button class="btn primary" id="addDocTypeBtn">➕ Incluir NR</button>
+    </div>
+    <div id="novoDocMsg" style="font-size:12px;color:var(--red);margin-top:8px;"></div>
+  </div>
+
+  <div class="section-head"><span class="idx">04</span><h2>Histórico de Alterações</h2><span class="line"></span></div>
+  <p class="section-sub">Registro automático de cada vez que o sistema foi aberto e de cada criação, edição ou exclusão de colaborador neste navegador, com data e hora.</p>
+  <div class="panel" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:3px;padding:6px 18px 16px;">
+    <div style="display:flex;justify-content:flex-end;padding-top:10px;">
+      <button class="btn" id="exportHistCsvBtn">⬇ Exportar histórico (CSV)</button>
+    </div>
+    <div id="historicoList" style="max-height:280px;overflow-y:auto;overflow-x:hidden;margin-top:4px;"></div>
+  </div>
+
+  <footer>
+    <span id="footLeft">Documento independente de cadastro · avisos configuráveis de vencimento</span>
+    <span id="footRight"></span>
+  </footer>
+</main>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button class="toast-action" id="toastAction" style="display:none;"></button></div>
+
+<script>
+const BUILTIN_DOC_TYPES = {
+  'ASO':       {cor:'#f2b705', nome:'NR-07 · Atestado de Saúde Ocupacional', desc:'Exame médico ocupacional obrigatório para todo colaborador.'},
+  'NR-35':     {cor:'#4fa3e3', nome:'Trabalho em Altura', desc:'Treinamento obrigatório para atividades acima de 2m com risco de queda.'},
+  'NR-33':     {cor:'#a074e0', nome:'Espaços Confinados', desc:'Treinamento para entrada e trabalho em espaços confinados (trabalhador).'},
+  'NR-33 SUP': {cor:'#7a4fc9', nome:'Espaços Confinados · Supervisor', desc:'Capacitação de supervisor responsável por entradas em espaços confinados.'},
+  'LOTO':      {cor:'#3fae5c', nome:'NR-10/12 · Bloqueio e Etiquetagem', desc:'Procedimento de bloqueio e etiquetagem (Lockout/Tagout) para energia perigosa.'},
+  'NR-11/18':  {cor:'#e3894f', nome:'Plataforma de Elevação', desc:'Capacitação para operação de plataformas elevatórias / movimentação de cargas.'},
+  'NR-20':     {cor:'#d65f8a', nome:'Inflamáveis e Combustíveis', desc:'Treinamento para atividades com líquidos inflamáveis e combustíveis.'},
+};
+const PALETA_CORES_NR = ['#4fd1c5','#f26b6b','#8fd15a','#c084fc','#5aa9e6','#e6a65a','#e65a9e','#5ae6c2','#e6d75a','#9e9ee6'];
+
+let DOC_TYPES = {};   // sigla -> {cor, nome, desc}  — carregado/persistido dinamicamente
+let DOC_ORDER = [];   // recalculado sempre que DOC_TYPES muda, em ordem numérica de NR
+// DOC_META existe apenas como alias de compatibilidade com o restante do código
+let DOC_META = DOC_TYPES;
+
+// Extrai o "número da NR" de uma sigla para fins de ordenação e de exibição no ícone.
+// Casos especiais: ASO = NR-07, LOTO = NR-10/12. Variante "SUP" fica logo após a NR base (+0.5).
+function numeroNR(sigla){
+  const s = sigla.toUpperCase();
+  if(s === 'ASO') return 7;
+  if(s === 'LOTO') return 10;
+  const m = s.match(/(\d+)/);
+  let n = m ? parseInt(m[1], 10) : 999;
+  if(s.includes('SUP')) n += 0.5;
+  return n;
+}
+function numeroDisplay(sigla){
+  const n = numeroNR(sigla);
+  if(n === 999) return sigla.replace(/[^A-Z0-9]/gi,'').slice(0,3).toUpperCase();
+  const base = Math.floor(n);
+  const suf = (n % 1 !== 0) ? '+' : '';
+  return String(base).padStart(2,'0') + suf;
+}
+function rotuloChip(sigla){
+  const su = sigla.toUpperCase();
+  if(su === 'ASO') return {top:'ASO', bottom:''};
+  if(su === 'LOTO') return {top:'NR', bottom:'10/12'};
+  const semPrefixo = sigla.replace(/^NR-?/i,'').trim(); // ex.: '35', '33 SUP', '11/18', '20'
+  const temSup = /SUP/i.test(semPrefixo);
+  let numPart = semPrefixo.replace(/SUP/i,'').trim();
+  if(!numPart){
+    const n = numeroNR(sigla);
+    numPart = (n===999) ? sigla.replace(/[^A-Z0-9]/gi,'').slice(0,5).toUpperCase() : String(Math.floor(n)).padStart(2,'0');
+  }
+  if(temSup) numPart += '+';
+  return {top:'NR', bottom:numPart};
+}
+function compararSiglas(a, b){
+  return numeroNR(a) - numeroNR(b);
+}
+function proximaCorDisponivel(){
+  const usadas = new Set(Object.values(DOC_TYPES).map(m => m.cor));
+  const livre = PALETA_CORES_NR.find(c => !usadas.has(c));
+  return livre || PALETA_CORES_NR[Object.keys(DOC_TYPES).length % PALETA_CORES_NR.length];
+}
+function recalcularDocOrder(){
+  DOC_ORDER = Object.keys(DOC_TYPES).sort(compararSiglas);
+  DOC_META = DOC_TYPES;
+}
+
+const STATUS_META = {
+  vencido:      {label:'Vencido',       cor:'#e2483a', bg:'rgba(226,72,58,0.16)'},
+  a_vencer:     {label:'A vencer',cor:'#f2954a', bg:'rgba(242,149,74,0.16)'},
+  valido:       {label:'Válido',        cor:'#3fae5c', bg:'rgba(63,174,92,0.15)'},
+  sem_registro: {label:'Sem registro',  cor:'#6b7280', bg:'rgba(107,114,128,0.14)'},
+};
+
+let AUTH_TOKEN = null;
+let AUTH_USERNAME = null;
+let AUTH_ROLE = null;
+let HISTORICO = [];
+
+// ---------- Estado ----------
+let DATA = [];
+let CFG = {avisoDias: 30, notifAtivado: false, empresa: 'Verzani e Sandrini'};
+let sortKey = 'nome';
+let sortDir = 1;
+let openEditId = null;
+
+async function apiFetch(path, options = {}){
+  const headers = Object.assign({}, options.headers, AUTH_TOKEN ? {'Authorization': 'Bearer ' + AUTH_TOKEN} : {});
+  if(options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  const res = await fetch(path, Object.assign({}, options, {headers}));
+  if(res.status === 401){
+    encerrarSessao();
+    throw new Error('sessao_expirada');
+  }
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok){
+    throw new Error(data.error || 'erro_desconhecido');
+  }
+  return data;
+}
+
+function hojeISO(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function diasParaHoje(iso){
+  if(!iso) return null;
+  const hoje = new Date(hojeISO()+'T00:00:00');
+  const dt = new Date(iso+'T00:00:00');
+  return Math.round((dt-hoje)/86400000);
+}
+function statusFor(iso){
+  const dias = diasParaHoje(iso);
+  if(dias === null) return 'sem_registro';
+  if(dias < 0) return 'vencido';
+  if(dias <= CFG.avisoDias) return 'a_vencer';
+  return 'valido';
+}
+function statusGeral(e){
+  const ordem = {vencido:3, a_vencer:2, valido:1, sem_registro:0};
+  let pior = 'sem_registro', tem = false;
+  DOC_ORDER.forEach(sigla => {
+    const st = statusFor(e.docs[sigla]);
+    if(st !== 'sem_registro'){ tem = true; if(ordem[st] > ordem[pior]) pior = st; }
+  });
+  return tem ? pior : 'sem_registro';
+}
+function proxVencimento(e){
+  let melhor = null;
+  DOC_ORDER.forEach(sigla => {
+    const d = e.docs[sigla];
+    if(!d) return;
+    const dias = diasParaHoje(d);
+    if(melhor === null || dias < melhor.dias) melhor = {dias, data:d, sigla};
+  });
+  return melhor;
+}
+function diasDoStatusGeral(e, sg){
+  if(sg === 'sem_registro') return null;
+  let melhor = null;
+  DOC_ORDER.forEach(sigla => {
+    const d = e.docs[sigla];
+    if(!d) return;
+    if(statusFor(d) !== sg) return; // só considera os documentos que geraram esse status
+    const dias = diasParaHoje(d);
+    if(melhor === null || dias < melhor) melhor = dias;
+  });
+  return melhor;
+}
+
+function escapeHTML(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2), 16);
+  const g = parseInt(h.substring(2,4), 16);
+  const b = parseInt(h.substring(4,6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function showToast(msg, type, action){
+  const t = document.getElementById('toast');
+  const msgEl = document.getElementById('toastMsg');
+  const actionBtn = document.getElementById('toastAction');
+  msgEl.textContent = msg;
+  t.classList.toggle('error', type === 'error');
+  if(action){
+    actionBtn.textContent = action.label;
+    actionBtn.style.display = 'inline';
+    actionBtn.onclick = () => { action.onClick(); t.classList.remove('show'); };
+  } else {
+    actionBtn.style.display = 'none';
+    actionBtn.onclick = null;
+  }
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), action ? 6000 : (type === 'error' ? 5000 : 2800));
+}
+
+// ---------- Persistência (API) ----------
+function updateSaveIndicator(txt){
+  const el = document.getElementById('metaSaveStatus');
+  if(el) el.textContent = txt;
+}
+
+function encerrarSessao(){
+  AUTH_TOKEN = null;
+  AUTH_USERNAME = null;
+  AUTH_ROLE = null;
+  try{ window.localStorage.removeItem('auth_token_v1'); }catch(err){ /* nada */ }
+  mostrarTelaLogin();
+}
+
+async function carregarSessaoSalva(){
+  try{
+    const raw = window.localStorage.getItem('auth_token_v1');
+    if(!raw) return false;
+    const saved = JSON.parse(raw);
+    AUTH_TOKEN = saved.token;
+    AUTH_USERNAME = saved.username;
+    AUTH_ROLE = saved.role;
+    return true;
+  }catch(err){ return false; }
+}
+
+function salvarSessao(){
+  try{
+    window.localStorage.setItem('auth_token_v1', JSON.stringify({token: AUTH_TOKEN, username: AUTH_USERNAME, role: AUTH_ROLE}));
+  }catch(err){ /* nada */ }
+}
+
+async function fazerLogin(username, password){
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username, password})
+  });
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok){
+    throw new Error(data.error || 'erro_desconhecido');
+  }
+  AUTH_TOKEN = data.token;
+  AUTH_USERNAME = data.username;
+  AUTH_ROLE = data.role;
+  salvarSessao();
+  return data;
+}
+
+async function loadInitial(){
+  DOC_TYPES = JSON.parse(JSON.stringify(BUILTIN_DOC_TYPES));
+  const data = await apiFetch('/api/data');
+  DATA = data.colaboradores.map(e => ({
+    id: e.id, nome: e.nome, notas: e.notas || [], docs: e.docs || {}
+  }));
+  if(data.docTypes && data.docTypes.length > 0){
+    DOC_TYPES = {};
+    data.docTypes.forEach(dt => {
+      DOC_TYPES[dt.sigla] = {cor: dt.cor, nome: dt.nome, desc: dt.descricao};
+    });
+  }
+  recalcularDocOrder();
+  DATA = DATA.map(e => ({
+    ...e,
+    docs: DOC_ORDER.reduce((acc, s) => { acc[s] = (s in e.docs) ? e.docs[s] : null; return acc; }, {}),
+  }));
+  if(data.config){
+    if(data.config.avisoDias) CFG.avisoDias = parseInt(data.config.avisoDias, 10) || 30;
+    if(data.config.empresa) CFG.empresa = data.config.empresa;
+  }
+  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao}));
+  updateSaveIndicator('Conectado (' + AUTH_USERNAME + ')');
+}
+
+async function refreshData(){
+  const data = await apiFetch('/api/data');
+  DATA = data.colaboradores.map(e => ({ id: e.id, nome: e.nome, notas: e.notas || [], docs: e.docs || {} }));
+  DOC_TYPES = {};
+  data.docTypes.forEach(dt => { DOC_TYPES[dt.sigla] = {cor: dt.cor, nome: dt.nome, desc: dt.descricao}; });
+  recalcularDocOrder();
+  DATA = DATA.map(e => ({
+    ...e,
+    docs: DOC_ORDER.reduce((acc, s) => { acc[s] = (s in e.docs) ? e.docs[s] : null; return acc; }, {}),
+  }));
+  if(data.config){
+    if(data.config.avisoDias) CFG.avisoDias = parseInt(data.config.avisoDias, 10) || 30;
+    if(data.config.empresa) CFG.empresa = data.config.empresa;
+  }
+  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao}));
+  renderAll();
+  renderHistorico();
+  refreshDocFilterOptions();
+}
+
+async function persistConfig(chave, valor){
+  await apiFetch('/api/config', {method: 'POST', body: JSON.stringify({chave, valor})});
+}
+
+
+function formatarDataHora(iso){
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderHistorico(){
+  const list = document.getElementById('historicoList');
+  if(!list) return;
+  if(HISTORICO.length === 0){
+    list.innerHTML = `<div class="empty-state">Nenhuma alteração registrada ainda.</div>`;
+    return;
+  }
+  list.innerHTML = HISTORICO.map(h => `
+    <div class="alert-item" style="align-items:flex-start;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);flex:none;width:120px;">${formatarDataHora(h.ts)}</span>
+      <span style="font-weight:600;color:var(--amber);flex:none;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(h.quem || '—')}</span>
+      <span style="flex:1;color:var(--text);">${escapeHTML(h.acao)}</span>
+    </div>`).join('');
+}
+
+function exportHistoricoCSV(){
+  const linhas = [['Data/hora','Usuário','Ação'].join(';')];
+  HISTORICO.forEach(h => {
+    linhas.push([formatarDataHora(h.ts), h.quem || '', h.acao].map(v => `"${String(v).replace(/"/g,'""')}"`).join(';'));
+  });
+  const csv = '\uFEFF' + linhas.join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `historico_alteracoes_${hojeISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function adicionarTipoDocumento(siglaBruta, nomeBruto){
+  const sigla = siglaBruta.trim().toUpperCase().replace(/\s+/g,' ');
+  const nome = nomeBruto.trim();
+  if(!sigla) return {ok:false, msg:'Informe a sigla da NR (ex.: NR-12).'};
+  if(!nome) return {ok:false, msg:'Informe uma descrição para essa NR.'};
+  if(DOC_TYPES[sigla]) return {ok:false, msg:`"${sigla}" já existe na lista de documentos.`};
+  try{
+    await apiFetch('/api/doctype', {method:'POST', body: JSON.stringify({sigla, nome})});
+    await refreshData();
+    return {ok:true};
+  }catch(err){
+    return {ok:false, msg:'Não foi possível incluir: ' + err.message};
+  }
+}
+
+async function excluirTipoDocumento(sigla){
+  if(!DOC_TYPES[sigla]) return;
+  try{
+    await apiFetch('/api/doctype?sigla=' + encodeURIComponent(sigla), {method:'DELETE'});
+    await refreshData();
+  }catch(err){
+    showToast('Não foi possível excluir: ' + err.message, 'error');
+  }
+}
+
+function refreshDocFilterOptions(){
+  const sel = document.getElementById('docFilter');
+  if(!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Documento: todos</option>' + DOC_ORDER.map(s => `<option value="${s}">${s}</option>`).join('');
+  if(DOC_ORDER.includes(atual)) sel.value = atual;
+}
+
+// ---------- KPIs ----------
+function renderKPIs(){
+  document.getElementById('metaHoje').textContent = fmtDate(hojeISO());
+  document.getElementById('metaTotal').textContent = DATA.length;
+  const counts = {vencido:0, a_vencer:0, valido:0, sem_registro:0};
+  DATA.forEach(e => counts[statusGeral(e)]++);
+  const kpis = [
+    {cls:'k-total',   num:DATA.length, lbl:'Colaboradores cadastrados', filtro:''},
+    {cls:'k-vencido', num:counts.vencido, lbl:'Com documento vencido', filtro:'vencido'},
+    {cls:'k-avencer', num:counts.a_vencer, lbl:`Vencendo em até ${CFG.avisoDias} dias`, filtro:'a_vencer'},
+    {cls:'k-valido',  num:counts.valido, lbl:'Totalmente em dia', filtro:'valido'},
+    {cls:'k-sem',     num:counts.sem_registro, lbl:'Sem nenhum registro', filtro:'sem_registro'},
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k => `
+    <div class="kpi ${k.cls}" data-kpi-filter="${k.filtro}" style="cursor:pointer;" title="Clique para ver e editar estes colaboradores" tabindex="0" role="button" aria-label="${k.lbl}: ${k.num}. Clique para ver e editar."><div class="num">${k.num}</div><div class="lbl">${k.lbl}</div></div>`).join('');
+
+  document.querySelectorAll('#kpiRow [data-kpi-filter]').forEach(card => {
+    card.addEventListener('click', () => irParaEdicaoPorStatus(card.dataset.kpiFilter));
+    card.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); irParaEdicaoPorStatus(card.dataset.kpiFilter); }
+    });
+  });
+}
+
+function irParaEdicaoPorStatus(filtro){
+  document.getElementById('statusFilter').value = filtro;
+  document.getElementById('docFilter').value = '';
+  document.getElementById('searchInput').value = '';
+  if(filtro === 'vencido' || filtro === 'a_vencer_atencao' || filtro === 'a_vencer'){
+    sortKey = 'proxVenc';
+    sortDir = 1;
+    document.querySelectorAll('thead th .arrow').forEach(a => a.textContent = '');
+    const thProx = document.querySelector('thead th[data-key="proxVenc"] .arrow');
+    if(thProx) thProx.textContent = '▲';
+  }
+  renderTable();
+  const alvo = document.getElementById('tabelaColaboradores');
+  if(alvo) alvo.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderLegend(){
+  document.getElementById('docLegend').innerHTML = DOC_ORDER.map(sigla => {
+    const m = DOC_META[sigla];
+    return `<div class="legend-item" style="display:flex;gap:10px;align-items:flex-start;background:var(--bg-panel-2);border:1px solid var(--line);border-radius:3px;padding:10px 12px;position:relative;">
+      <span class="chip" style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:3px 7px;border-radius:2px;flex:none;margin-top:1px;background:${m.cor};color:#15171a">${escapeHTML(sigla)}</span>
+      <span style="font-size:12.5px;color:var(--text-dim);line-height:1.4;flex:1;"><b style="color:var(--text);font-weight:600;">${escapeHTML(m.nome)}</b><br>${escapeHTML(m.desc)}</span>
+      <button data-del-doctype="${sigla}" title="Excluir este tipo de documento" style="background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;padding:2px;flex:none;">✕</button>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('[data-del-doctype]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const sigla = btn.dataset.delDoctype;
+      if(confirm(`Excluir "${sigla}" da lista de documentos? Isso remove esse campo de TODOS os colaboradores (as demais datas não são afetadas).`)){
+        openEditId = null;
+        await excluirTipoDocumento(sigla);
+        refreshDocFilterOptions();
+        showToast(`"${sigla}" removido dos documentos.`);
+      }
+    });
+  });
+}
+
+// ---------- Painel por documento (dias de vencimento por documento individual) ----------
+function renderDocPanel(){
+  const el = document.getElementById('docPanel');
+  if(!el) return;
+  el.innerHTML = DOC_ORDER.map(sigla => {
+    const meta = DOC_META[sigla];
+    const counts = {vencido:0, a_vencer:0, valido:0, sem_registro:0};
+    const itens = [];
+    DATA.forEach(e => {
+      const d = e.docs[sigla];
+      const st = statusFor(d);
+      counts[st]++;
+      if(d){
+        const dias = diasParaHoje(d);
+        itens.push({id:e.id, nome:e.nome, dias, data:d, status:st});
+      }
+    });
+    itens.sort((a,b) => a.nome.localeCompare(b.nome));
+    const total = DATA.length;
+    const segs = ['vencido','a_vencer','valido','sem_registro'].map(st => {
+      const pct = (counts[st]/total*100).toFixed(2);
+      return `<span style="width:${pct}%;background:${STATUS_META[st].cor};opacity:${st==='sem_registro'?0.5:1}"></span>`;
+    }).join('');
+    const comData = total - counts.sem_registro;
+    const proximos = itens.map(it => {
+      const sm = STATUS_META[it.status];
+      const diasTxt = it.dias < 0 ? `${Math.abs(it.dias)}d vencido` : (it.dias===0?'vence hoje':`${it.dias}d`);
+      return `<div data-emp-edit="${it.id}" data-doc-sigla="${sigla}" style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:4px 0;border-top:1px solid var(--line);" title="Clique para editar ${escapeHTML(it.nome)}" tabindex="0" role="button" aria-label="Editar ${escapeHTML(it.nome)}, ${diasTxt}">
+        <span style="color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(it.nome)}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:${sm.cor};flex:none;">${diasTxt}</span>
+      </div>`;
+    }).join('') || `<div style="font-size:11.5px;color:var(--text-dim);padding:6px 0;">Nenhuma data cadastrada ainda.</div>`;
+
+    return `<div class="doc-panel-card" data-doc-card="${sigla}" style="cursor:pointer;background:${hexToRgba(meta.cor,0.05)};border:1px solid var(--line);border-top:3px solid ${meta.cor};border-radius:3px;padding:14px 16px;transition:transform 0.15s,box-shadow 0.15s;" title="Clique para editar os colaboradores deste documento" tabindex="0" role="button" aria-label="${escapeHTML(meta.nome)}: ${comData} de ${total} com registro. Clique para ver todos.">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <span style="font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.03em;color:${meta.cor};">${escapeHTML(sigla)}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);">${comData}/${total}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">${escapeHTML(meta.nome)}</div>
+      <div class="doc-bar" style="height:7px;border-radius:2px;overflow:hidden;display:flex;background:var(--gray-dim);margin-bottom:8px;">${segs}</div>
+      <div style="max-height:170px;overflow-y:auto;">${proximos}</div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('[data-doc-card]').forEach(card => {
+    card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-1px)'; card.style.boxShadow = '0 4px 14px rgba(0,0,0,0.35)'; });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; card.style.boxShadow = ''; });
+    card.addEventListener('click', () => irParaEdicaoDoDocumento(card.dataset.docCard));
+    card.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); irParaEdicaoDoDocumento(card.dataset.docCard); }
+    });
+  });
+  el.querySelectorAll('[data-emp-edit]').forEach(row => {
+    row.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      irParaEdicaoDoColaborador(row.dataset.empEdit, row.dataset.docSigla);
+    });
+    row.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter' || ev.key === ' '){
+        ev.preventDefault();
+        ev.stopPropagation();
+        irParaEdicaoDoColaborador(row.dataset.empEdit, row.dataset.docSigla);
+      }
+    });
+  });
+}
+
+function irParaEdicaoDoColaborador(id, sigla){
+  document.getElementById('docFilter').value = sigla;
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('searchInput').value = '';
+  openEditId = id;
+  renderTable();
+  const linha = document.querySelector(`[data-edit="${id}"]`);
+  if(linha) linha.closest('tr').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function irParaEdicaoDoDocumento(sigla){
+  document.getElementById('docFilter').value = sigla;
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('searchInput').value = '';
+  sortKey = 'proxVenc';
+  sortDir = 1; // mais urgente (vencido/vencendo) primeiro
+  document.querySelectorAll('thead th .arrow').forEach(a => a.textContent = '');
+  const thProx = document.querySelector('thead th[data-key="proxVenc"] .arrow');
+  if(thProx) thProx.textContent = '▲';
+  renderTable();
+  const alvo = document.getElementById('tabelaColaboradores');
+  if(alvo) alvo.scrollIntoView({behavior:'smooth', block:'start'});
+  showToast(`Mostrando colaboradores de ${sigla}, do mais urgente para o mais recente — clique no ✎ de uma linha para editar.`);
+}
+
+// ---------- Central de avisos ----------
+function itensDentroDoLimiar(){
+  const limiar = CFG.avisoDias;
+  let items = [];
+  DATA.forEach(e => {
+    DOC_ORDER.forEach(sigla => {
+      const d = e.docs[sigla];
+      if(!d) return;
+      const dias = diasParaHoje(d);
+      if(dias < 0 || dias <= limiar){
+        items.push({id:e.id, nome:e.nome, sigla, dias, data:d, status: dias < 0 ? 'vencido' : 'a_vencer'});
+      }
+    });
+  });
+  items.sort((a,b) => a.dias - b.dias);
+  return items;
+}
+
+function renderAvisos(){
+  const items = itensDentroDoLimiar();
+  const banner = document.getElementById('alertBanner');
+  const ico = document.getElementById('alertIco');
+  const summary = document.getElementById('alertSummary');
+  const list = document.getElementById('alertList');
+  if(items.length === 0){
+    banner.style.display = 'none';
+    return;
+  }
+  const vencidos = items.filter(i => i.dias < 0);
+  const aVencer = items.length - vencidos.length;
+  banner.style.display = 'flex';
+  banner.classList.remove('banner-danger','banner-warn');
+  banner.classList.add(vencidos.length > 0 ? 'banner-danger' : 'banner-warn');
+  ico.textContent = vencidos.length > 0 ? '🚨' : '🔔';
+
+  const resumoPartes = [];
+  if(vencidos.length > 0) resumoPartes.push(`<b>${vencidos.length} documento(s) vencido(s)</b>`);
+  if(aVencer > 0) resumoPartes.push(`<b>${aVencer}</b> vencendo em até ${CFG.avisoDias} dias`);
+  summary.innerHTML = `${resumoPartes.join(' e ')}. Clique num nome para editar.`;
+
+  list.innerHTML = items.map(it => {
+    const sm = STATUS_META[it.status];
+    const diasTxt = it.dias < 0 ? `${Math.abs(it.dias)}d vencido` : (it.dias===0?'vence hoje':`${it.dias}d`);
+    return `<div class="alert-item">
+      <span class="dot" style="background:${sm.cor}"></span>
+      <button type="button" class="nm" data-emp-edit="${it.id}" data-doc-sigla="${it.sigla}">${escapeHTML(it.nome)}</button>
+      <span class="doc">${escapeHTML(it.sigla)}</span>
+      <span class="days" style="color:${sm.cor};background:${sm.bg}">${diasTxt}</span>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-emp-edit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      irParaEdicaoDoColaborador(btn.dataset.empEdit, btn.dataset.docSigla);
+    });
+  });
+}
+
+function checarNotificacaoNavegador(){
+  if(!CFG.notifAtivado) return;
+  if(!('Notification' in window)) return;
+  if(Notification.permission !== 'granted') return;
+  const items = itensDentroDoLimiar();
+  if(items.length === 0) return;
+  const vencidos = items.filter(i => i.dias < 0).length;
+  const aVencer = items.length - vencidos;
+  try{
+    new Notification('Vencimentos ASO / NR', {
+      body: `${vencidos} documento(s) vencido(s) e ${aVencer} vencendo em até ${CFG.avisoDias} dias.`,
+    });
+  }catch(err){ console.warn('Notificação não disponível neste ambiente', err); }
+}
+
+async function ativarNotificacao(){
+  const statusEl = document.getElementById('notifStatus');
+  if(!('Notification' in window)){
+    statusEl.textContent = 'Notificações não são suportadas neste navegador/ambiente.';
+    return;
+  }
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted'){
+      CFG.notifAtivado = true;
+      await persistConfig();
+      statusEl.textContent = 'Ativado — você verá um aviso ao abrir esta página se houver vencimentos.';
+      checarNotificacaoNavegador();
+    } else {
+      statusEl.textContent = 'Permissão não concedida pelo navegador.';
+    }
+  }catch(err){
+    statusEl.textContent = 'Não foi possível ativar notificações neste ambiente. O banner no topo da página continua funcionando normalmente.';
+  }
+}
+
+function escapeICS(str){
+  return String(str).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+}
+
+// ---------- Tabela ----------
+function getFiltered(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const statusF = document.getElementById('statusFilter').value;
+  const docF = document.getElementById('docFilter').value;
+  return DATA.filter(e => {
+    if(q){
+      const alvo = (e.nome + ' ' + (e.notas||[]).join(' ')).toLowerCase();
+      if(!alvo.includes(q)) return false;
+    }
+    if(docF){
+      const stDoc = statusFor(e.docs[docF]);
+      if(statusF && stDoc !== statusF) return false;
+      if(!statusF && stDoc === 'sem_registro') return false;
+    } else if(statusF && statusGeral(e) !== statusF){
+      return false;
+    }
+    return true;
+  });
+}
+function sortRows(rows){
+  const ordem = {vencido:3, a_vencer:2, valido:1, sem_registro:0};
+  const docF = document.getElementById('docFilter').value;
+  return rows.slice().sort((a,b) => {
+    if(sortKey === 'nome') return a.nome.localeCompare(b.nome)*sortDir;
+    if(sortKey === 'status_geral'){
+      const sa = docF ? statusFor(a.docs[docF]) : statusGeral(a);
+      const sb = docF ? statusFor(b.docs[docF]) : statusGeral(b);
+      return (ordem[sa]-ordem[sb])*sortDir;
+    }
+    if(sortKey === 'proxVenc'){
+      let av, bv;
+      if(docF){
+        const da = diasParaHoje(a.docs[docF]), db = diasParaHoje(b.docs[docF]);
+        av = da === null ? 999999 : da;
+        bv = db === null ? 999999 : db;
+      } else {
+        const pa = proxVencimento(a), pb = proxVencimento(b);
+        av = pa ? pa.dias : 999999; bv = pb ? pb.dias : 999999;
+      }
+      return (av-bv)*sortDir;
+    }
+    return 0;
+  });
+}
+
+function syncOpenEditToData(){
+  // Se há uma linha em edição aberta, captura o que está digitado nos campos
+  // ANTES de qualquer re-render que possa remover essa linha da tela (por causa
+  // de busca/filtro). Assim, alterações não salvas não se perdem silenciosamente.
+  if(!openEditId) return;
+  const e = DATA.find(x => x.id === openEditId);
+  if(!e) return;
+  const nomeEl = document.getElementById(`fld-nome-${openEditId}`);
+  if(!nomeEl) return; // linha de edição não está renderizada no momento
+  const nomeVal = nomeEl.value.trim();
+  if(nomeVal) e.nome = nomeVal;
+  const notasEl = document.getElementById(`fld-notas-${openEditId}`);
+  if(notasEl){
+    const notasVal = notasEl.value.trim();
+    e.notas = notasVal ? notasVal.split(',').map(s => s.trim()).filter(Boolean) : [];
+  }
+  DOC_ORDER.forEach(sigla => {
+    const dEl = document.getElementById(`fld-doc-${openEditId}-${sigla}`);
+    if(dEl) e.docs[sigla] = dEl.value || null;
+  });
+}
+
+function renderTable(){
+  syncOpenEditToData();
+  let rows = sortRows(getFiltered());
+  const docF = document.getElementById('docFilter').value;
+  document.getElementById('rowCount').textContent = `${rows.length} de ${DATA.length} colaboradores`;
+  const tbody = document.getElementById('tableBody');
+
+  if(DATA.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="big">Nenhum colaborador cadastrado</div>Clique em "＋ Novo colaborador" para começar, ou carregue um backup salvo anteriormente.</div></td></tr>`;
+    return;
+  }
+  if(rows.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Nenhum resultado para os filtros atuais.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(e => rowHTML(e, docF)).join('');
+
+  tbody.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => {
+    openEditId = openEditId === btn.dataset.edit ? null : btn.dataset.edit;
+    renderTable();
+    if(openEditId){
+      const nomeField = document.getElementById(`fld-nome-${openEditId}`);
+      if(nomeField){ nomeField.focus(); nomeField.select(); }
+    }
+  }));
+  tbody.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async () => {
+    const e = DATA.find(x => x.id === btn.dataset.del);
+    if(confirm(`Excluir "${e.nome}" do cadastro?`)){
+      try{
+        await apiFetch('/api/colaborador?id=' + encodeURIComponent(e.id), {method:'DELETE'});
+        await refreshData();
+        showToast(`"${e.nome}" excluído.`, null, {
+          label: 'Desfazer',
+          onClick: async () => {
+            try{
+              await apiFetch('/api/colaborador', {method:'POST', body: JSON.stringify({nome: e.nome, notas: e.notas, docs: e.docs})});
+              await refreshData();
+              showToast('Exclusão desfeita.');
+            }catch(err){
+              showToast('Não foi possível desfazer: ' + err.message, 'error');
+            }
+          }
+        });
+      }catch(err){
+        showToast('Não foi possível excluir: ' + err.message, 'error');
+      }
+    }
+  }));
+  tbody.querySelectorAll('[data-save-edit]').forEach(btn => btn.addEventListener('click', () => saveEdit(btn.dataset.saveEdit)));
+  tbody.querySelectorAll('[data-cancel-edit]').forEach(btn => btn.addEventListener('click', () => { openEditId = null; renderTable(); }));
+  tbody.querySelectorAll('[data-clear]').forEach(btn => btn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    const input = document.querySelector(`input[data-date-for="${btn.dataset.clear}"]`);
+    if(input) input.value = '';
+  }));
+  tbody.querySelectorAll('[data-quick-date]').forEach(btn => btn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    const input = document.querySelector(`input[data-date-for="${btn.dataset.quickDate}"]`);
+    if(input) input.value = dataDaquiAMeses(parseInt(btn.dataset.meses, 10));
+  }));
+  tbody.querySelectorAll('.edit-row .edit-grid, .edit-row .edit-actions').forEach(container => {
+    container.addEventListener('keydown', (ev) => {
+      const id = openEditId;
+      if(!id) return;
+      if(ev.key === 'Enter' && ev.target.tagName === 'INPUT'){
+        ev.preventDefault();
+        saveEdit(id);
+      } else if(ev.key === 'Escape'){
+        ev.preventDefault();
+        openEditId = null;
+        renderTable();
+      }
+    });
+  });
+}
+
+function dataDaquiAMeses(meses){
+  const d = new Date();
+  d.setMonth(d.getMonth() + meses);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function rowHTML(e, docF){
+  // Quando há um documento filtrado, TODA a linha (status, dias, próximo vencimento)
+  // passa a refletir especificamente aquele documento — não o pior status entre todos.
+  let sg, diasStatusTxt;
+  if(docF){
+    sg = statusFor(e.docs[docF]);
+    const diasDoc = diasParaHoje(e.docs[docF]);
+    diasStatusTxt = diasDoc !== null ? ` (${diasDoc}d)` : '';
+  } else {
+    sg = statusGeral(e);
+    const diasSg = diasDoStatusGeral(e, sg);
+    diasStatusTxt = diasSg !== null ? ` (${diasSg}d)` : '';
+  }
+  const sm = STATUS_META[sg];
+  const chips = DOC_ORDER.map(sigla => {
+    const d = e.docs[sigla];
+    const st = statusFor(d);
+    if(st === 'sem_registro') return `<div class="doc-chip sr" title="${sigla}: sem registro">·</div>`;
+    const stm = STATUS_META[st];
+    const meta = DOC_META[sigla];
+    const rot = rotuloChip(sigla);
+    return `<div class="doc-chip" style="background:${meta.cor};border:2px solid ${stm.cor}" title="${sigla}: ${stm.label} — ${fmtDate(d)}"><span class="chip-top">${rot.top}</span>${rot.bottom ? `<span class="chip-bottom">${rot.bottom}</span>` : ''}</div>`;
+  }).join('');
+
+  let proxTxt;
+  if(docF){
+    const dDoc = e.docs[docF];
+    const stDoc = STATUS_META[statusFor(dDoc)];
+    proxTxt = dDoc ? `${fmtDate(dDoc)} <span style="color:${stDoc.cor}">(${docF})</span>` : `<span style="color:var(--text-dim)">sem registro (${docF})</span>`;
+  } else {
+    const prox = proxVencimento(e);
+    proxTxt = prox ? `${fmtDate(prox.data)} <span style="color:var(--text-dim)">(${prox.sigla})</span>` : '—';
+  }
+  const flag = e.notas && e.notas.length ? `<span class="flag">${escapeHTML(e.notas.join(', '))}</span>` : '';
+
+  let html = `<tr>
+    <td class="nm-cell">${escapeHTML(e.nome)}${flag}</td>
+    <td><span class="status-pill" style="color:${sm.cor};background:${sm.bg}">${sm.label}${diasStatusTxt}</span></td>
+    <td><div class="chips-cell">${chips}</div></td>
+    <td style="font-family:'IBM Plex Mono',monospace;font-size:12px">${proxTxt}</td>
+    <td><div class="row-actions">
+      <button class="icon-btn" data-edit="${e.id}" title="Editar" aria-label="Editar ${escapeHTML(e.nome)}">✎</button>
+      <button class="icon-btn del" data-del="${e.id}" title="Excluir" aria-label="Excluir ${escapeHTML(e.nome)}">✕</button>
+    </div></td>
+  </tr>`;
+
+  if(openEditId === e.id){
+    html += `<tr class="edit-row"><td colspan="5">
+      <div class="edit-grid">
+        <div class="field wide">
+          <label>Nome completo</label>
+          <input type="text" id="fld-nome-${e.id}" value="${escapeHTML(e.nome)}">
+        </div>
+        <div class="field wide">
+          <label>Observação (ex.: Afastado)</label>
+          <input type="text" id="fld-notas-${e.id}" value="${escapeHTML((e.notas||[]).join(', '))}" placeholder="opcional">
+        </div>
+        ${DOC_ORDER.map(sigla => `
+        <div class="field">
+          <label>${sigla}</label>
+          <input type="date" data-date-for="${e.id}-${sigla}" id="fld-doc-${e.id}-${sigla}" value="${e.docs[sigla]||''}">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+            <a class="clear-date" data-quick-date="${e.id}-${sigla}" data-meses="12" href="#" title="Define para daqui a 1 ano a partir de hoje">+1 ano</a>
+            <a class="clear-date" data-quick-date="${e.id}-${sigla}" data-meses="24" href="#" title="Define para daqui a 2 anos a partir de hoje">+2 anos</a>
+            <a class="clear-date" data-clear="${e.id}-${sigla}" href="#">limpar</a>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="edit-actions">
+        <button class="btn ghost" data-cancel-edit="${e.id}">Cancelar</button>
+        <button class="btn primary" data-save-edit="${e.id}">Salvar colaborador</button>
+      </div>
+    </td></tr>`;
+  }
+  return html;
+}
+
+async function saveEdit(id){
+  const e = DATA.find(x => x.id === id);
+  if(!e) return;
+  const nomeField = document.getElementById(`fld-nome-${id}`);
+  const nome = nomeField.value.trim();
+  if(!nome){
+    nomeField.style.borderColor = 'var(--red)';
+    nomeField.focus();
+    showToast('Informe o nome do colaborador.');
+    return;
+  }
+  nomeField.style.borderColor = '';
+  const duplicado = DATA.some(x => x.id !== id && x.nome.trim().toLowerCase() === nome.toLowerCase());
+  const eraNovo = e._novo === true;
+  const notasRaw = document.getElementById(`fld-notas-${id}`).value.trim();
+  const notas = notasRaw ? notasRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const docs = {};
+  DOC_ORDER.forEach(sigla => {
+    const val = document.getElementById(`fld-doc-${id}-${sigla}`).value;
+    docs[sigla] = val || null;
+  });
+  try{
+    await apiFetch('/api/colaborador', {method:'POST', body: JSON.stringify({id: eraNovo ? null : id, nome, notas, docs})});
+    openEditId = null;
+    await refreshData();
+    showToast(duplicado ? `Colaborador salvo. Atenção: já existe outro "${nome}" cadastrado.` : 'Colaborador salvo.');
+  }catch(err){
+    showToast('Não foi possível salvar: ' + err.message, 'error');
+  }
+}
+
+function addNew(){
+  const id = 'e_new_'+Date.now();
+  const docs = {}; DOC_ORDER.forEach(s => docs[s] = null);
+  DATA.push({id, nome:'Novo colaborador', notas:[], docs, _novo:true});
+  openEditId = id;
+  document.getElementById('searchInput').value = '';
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('docFilter').value = '';
+  renderAll();
+  setTimeout(() => {
+    const el = document.getElementById(`fld-nome-${id}`);
+    if(el){ el.focus(); el.select(); el.scrollIntoView({behavior:'smooth', block:'center'}); }
+  }, 50);
+}
+
+// ---------- Export / Import backup ----------
+function exportCSV(){
+  const rows = sortRows(getFiltered());
+  const header = ['Nome','Observação','Status geral', ...DOC_ORDER.map(s => s+' data'), ...DOC_ORDER.map(s => s+' status')];
+  const lines = [header.join(';')];
+  rows.forEach(e => {
+    const line = [
+      e.nome,
+      (e.notas||[]).join(', '),
+      STATUS_META[statusGeral(e)].label,
+      ...DOC_ORDER.map(s => fmtDate(e.docs[s])),
+      ...DOC_ORDER.map(s => STATUS_META[statusFor(e.docs[s])].label),
+    ];
+    lines.push(line.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';'));
+  });
+  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vencimentos_aso_nr_${hojeISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exportado.');
+}
+
+// ---------- Nome da empresa editável ----------
+function initEmpresaField(){
+  const el = document.getElementById('empresaInput');
+  if(!el) return;
+  el.value = CFG.empresa;
+  el.addEventListener('change', () => {
+    const v = el.value.trim() || 'Minha Empresa';
+    CFG.empresa = v;
+    el.value = v;
+    persistConfig('empresa', v);
+    showToast('Nome da empresa atualizado.');
+  });
+}
+
+// ---------- Init ----------
+function renderAll(){
+  syncOpenEditToData();
+  renderKPIs();
+  renderTable();
+  renderAvisos();
+  renderDocPanel();
+  renderLegend();
+  document.getElementById('footRight').textContent = `${DATA.length} colaboradores no cadastro`;
+}
+
+function mostrarTelaLogin(msg){
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginMsg').textContent = msg || '';
+}
+
+async function tentarLogin(){
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const msgEl = document.getElementById('loginMsg');
+  msgEl.textContent = '';
+  if(!username || !password){ msgEl.textContent = 'Preencha usuário e senha.'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  try{
+    await fazerLogin(username, password);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appRoot').style.display = 'block';
+    await iniciarApp();
+  }catch(err){
+    const mapa = {
+      invalid_credentials: 'Usuário ou senha incorretos.',
+      password_too_short: 'A senha precisa ter pelo menos 6 caracteres.',
+      missing_credentials: 'Preencha usuário e senha.',
+    };
+    msgEl.textContent = mapa[err.message] || 'Não foi possível entrar. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function carregarUsuarios(){
+  try{
+    const data = await apiFetch('/api/users');
+    const list = document.getElementById('usersList');
+    list.innerHTML = data.users.map(u => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
+        <div>
+          <div style="font-weight:600;">${escapeHTML(u.username)}</div>
+          <div style="font-size:11px;color:var(--text-dim);">${u.role === 'admin' ? 'Administrador' : 'Editor'}</div>
+        </div>
+        ${u.username !== AUTH_USERNAME ? `<button class="icon-btn del" data-remove-user="${escapeHTML(u.username)}" title="Remover">✕</button>` : '<span style="font-size:11px;color:var(--text-dim);">(você)</span>'}
+      </div>`).join('');
+    list.querySelectorAll('[data-remove-user]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm(`Remover o usuário "${btn.dataset.removeUser}"?`)) return;
+        try{
+          await apiFetch('/api/users?username=' + encodeURIComponent(btn.dataset.removeUser), {method:'DELETE'});
+          await carregarUsuarios();
+          showToast('Usuário removido.');
+        }catch(err){
+          showToast('Não foi possível remover: ' + err.message, 'error');
+        }
+      });
+    });
+  }catch(err){
+    showToast('Não foi possível carregar usuários: ' + err.message, 'error');
+  }
+}
+
+async function iniciarApp(){
+  await loadInitial();
+  renderLegend();
+  renderHistorico();
+  initEmpresaField();
+  document.getElementById('avisoDiasInput').value = CFG.avisoDias;
+  refreshDocFilterOptions();
+  renderAll();
+  checarNotificacaoNavegador();
+  setInterval(checarNotificacaoNavegador, 60 * 60 * 1000); // reavalia a cada hora em sessões longas
+  const thNome = document.querySelector('thead th[data-key="nome"] .arrow');
+  if(thNome) thNome.textContent = '▲';
+
+  document.getElementById('bannerText').textContent = `Conectado como ${AUTH_USERNAME} (${AUTH_ROLE === 'admin' ? 'administrador' : 'editor'})`;
+  document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
+
+  document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
+
+  document.getElementById('addBtn').addEventListener('click', addNew);
+  document.getElementById('searchInput').addEventListener('input', renderTable);
+  document.getElementById('statusFilter').addEventListener('change', renderTable);
+  document.getElementById('docFilter').addEventListener('change', renderTable);
+  document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+  document.getElementById('notifBtn').addEventListener('click', ativarNotificacao);
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    encerrarSessao();
+  });
+  document.getElementById('manageUsersBtn').addEventListener('click', () => {
+    document.getElementById('usersModal').style.display = 'flex';
+    carregarUsuarios();
+  });
+  document.getElementById('closeUsersModal').addEventListener('click', () => {
+    document.getElementById('usersModal').style.display = 'none';
+  });
+  document.getElementById('addUserBtn').addEventListener('click', async () => {
+    const username = document.getElementById('newUserUsername').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+    const msgEl = document.getElementById('newUserMsg');
+    msgEl.textContent = '';
+    if(!username || password.length < 6){ msgEl.textContent = 'Preencha usuário e senha (mín. 6 caracteres).'; return; }
+    try{
+      await apiFetch('/api/users', {method:'POST', body: JSON.stringify({username, password, role})});
+      document.getElementById('newUserUsername').value = '';
+      document.getElementById('newUserPassword').value = '';
+      await carregarUsuarios();
+      showToast('Usuário adicionado.');
+    }catch(err){
+      msgEl.textContent = err.message === 'ja_existe' ? 'Já existe um usuário com esse nome.' : 'Não foi possível adicionar.';
+    }
+  });
+
+  window.addEventListener('keydown', (ev) => {
+    const alvo = ev.target;
+    const digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'SELECT' || alvo.tagName === 'TEXTAREA');
+    if(ev.key === '/' && !digitando){
+      ev.preventDefault();
+      const search = document.getElementById('searchInput');
+      search.focus();
+      search.select();
+    }
+  });
+  document.getElementById('addDocTypeBtn').addEventListener('click', async () => {
+    const sigla = document.getElementById('novoDocSigla').value;
+    const nome = document.getElementById('novoDocNome').value;
+    const msgEl = document.getElementById('novoDocMsg');
+    const res = await adicionarTipoDocumento(sigla, nome);
+    if(!res.ok){ msgEl.textContent = res.msg; msgEl.style.color = 'var(--red)'; return; }
+    msgEl.textContent = '';
+    document.getElementById('novoDocSigla').value = '';
+    document.getElementById('novoDocNome').value = '';
+    refreshDocFilterOptions();
+    showToast(`"${sigla.trim().toUpperCase()}" adicionado — já disponível para preencher em cada colaborador.`);
+  });
+  document.getElementById('avisoDiasInput').addEventListener('change', (ev) => {
+    let v = parseInt(ev.target.value, 10);
+    if(isNaN(v) || v < 1) v = 1;
+    if(v > 180) v = 180;
+    CFG.avisoDias = v;
+    ev.target.value = v;
+    persistConfig('avisoDias', String(v));
+    renderAll();
+  });
+
+  document.querySelectorAll('thead th[data-key]').forEach(th => {
+    th.setAttribute('tabindex', '0');
+    th.setAttribute('role', 'button');
+    const ordenarPorEsteCabecalho = () => {
+      const key = th.dataset.key;
+      if(sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+      document.querySelectorAll('thead th .arrow').forEach(a => a.textContent = '');
+      document.querySelectorAll('thead th[data-key]').forEach(h => h.removeAttribute('aria-sort'));
+      th.querySelector('.arrow').textContent = sortDir === 1 ? '▲' : '▼';
+      th.setAttribute('aria-sort', sortDir === 1 ? 'ascending' : 'descending');
+      renderTable();
+    };
+    th.addEventListener('click', ordenarPorEsteCabecalho);
+    th.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); ordenarPorEsteCabecalho(); }
+    });
+  });
+}
+
+async function init(){
+  document.getElementById('loginBtn').addEventListener('click', tentarLogin);
+  document.getElementById('loginPassword').addEventListener('keydown', (ev) => {
+    if(ev.key === 'Enter') tentarLogin();
+  });
+
+  const temSessao = await carregarSessaoSalva();
+  if(temSessao){
+    try{
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appRoot').style.display = 'block';
+      await iniciarApp();
+      return;
+    }catch(err){
+      // sessão inválida/expirada — encerrarSessao() já foi chamado dentro de apiFetch, cai para a tela de login
+    }
+  }
+  mostrarTelaLogin();
+}
+init();
+
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.error('Falha ao registrar service worker:', err));
+  });
+}
+
+</script>
+</body>
+</html>
