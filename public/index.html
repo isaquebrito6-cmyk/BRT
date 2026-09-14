@@ -232,9 +232,10 @@
 
 <div id="recoveryCodeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center;padding:20px;">
   <div style="width:100%;max-width:420px;background:var(--bg-panel);border:2px solid var(--amber);border-radius:6px;padding:28px;">
-    <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0 0 12px;color:var(--amber);">⚠ Guarde seu código de recuperação</h2>
-    <p style="font-size:13px;color:var(--text-dim);line-height:1.5;margin:0 0 16px;">Esse código é a <b style="color:var(--text)">única forma de recuperar sua senha</b> se você esquecer. Anote e guarde num lugar seguro — ele não será mostrado de novo.</p>
-    <div id="recoveryCodeText" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--amber);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:4px;padding:16px;text-align:center;letter-spacing:0.05em;margin-bottom:20px;"></div>
+    <h2 id="recoveryCodeTitle" style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0 0 12px;color:var(--amber);">⚠ Guarde seu código de recuperação</h2>
+    <p id="recoveryCodeDesc" style="font-size:13px;color:var(--text-dim);line-height:1.5;margin:0 0 16px;">Esse código é a <b style="color:var(--text)">única forma de recuperar sua senha</b> se você esquecer. Anote e guarde num lugar seguro — ele não será mostrado de novo.</p>
+    <div id="recoveryCodeText" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--amber);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:4px;padding:16px;text-align:center;letter-spacing:0.05em;margin-bottom:12px;"></div>
+    <button class="btn" id="copyRecoveryCode" style="width:100%;justify-content:center;margin-bottom:20px;">📋 Copiar código</button>
     <button class="btn primary" id="closeRecoveryModal" style="width:100%;justify-content:center;">Já anotei, continuar</button>
   </div>
 </div>
@@ -1378,8 +1379,15 @@ function abrirModalRedefinirSenha(username){
   document.getElementById('adminResetModal').style.display = 'flex';
 }
 
-function mostrarCodigoRecuperacao(codigo){
+function mostrarCodigoRecuperacao(codigo, paraUsuario){
   document.getElementById('recoveryCodeText').textContent = codigo;
+  if(paraUsuario){
+    document.getElementById('recoveryCodeTitle').textContent = `⚠ Código de recuperação de "${paraUsuario}"`;
+    document.getElementById('recoveryCodeDesc').innerHTML = `Repasse esse código para <b style="color:var(--text)">${escapeHTML(paraUsuario)}</b> guardar — é a única forma dessa pessoa recuperar a senha sozinha se esquecer. Ele não será mostrado de novo.`;
+  } else {
+    document.getElementById('recoveryCodeTitle').textContent = '⚠ Guarde seu código de recuperação';
+    document.getElementById('recoveryCodeDesc').innerHTML = 'Esse código é a <b style="color:var(--text)">única forma de recuperar sua senha</b> se você esquecer. Anote e guarde num lugar seguro — ele não será mostrado de novo.';
+  }
   document.getElementById('recoveryCodeModal').style.display = 'flex';
 }
 
@@ -1497,11 +1505,12 @@ async function iniciarApp(){
     msgEl.textContent = '';
     if(!username || password.length < 6){ msgEl.textContent = 'Preencha usuário e senha (mín. 6 caracteres).'; return; }
     try{
-      await apiFetch('/api/users', {method:'POST', body: JSON.stringify({username, password, role})});
+      const res = await apiFetch('/api/users', {method:'POST', body: JSON.stringify({username, password, role})});
       document.getElementById('newUserUsername').value = '';
       document.getElementById('newUserPassword').value = '';
       await carregarUsuarios();
-      showToast('Usuário adicionado.');
+      showToast(`Usuário "${username}" adicionado.`);
+      if(res.recoveryCode) mostrarCodigoRecuperacao(res.recoveryCode, username);
     }catch(err){
       msgEl.textContent = err.message === 'ja_existe' ? 'Já existe um usuário com esse nome.' : 'Não foi possível adicionar.';
     }
@@ -1579,6 +1588,15 @@ async function init(){
   });
   document.getElementById('closeRecoveryModal').addEventListener('click', () => {
     document.getElementById('recoveryCodeModal').style.display = 'none';
+  });
+  document.getElementById('copyRecoveryCode').addEventListener('click', async () => {
+    const codigo = document.getElementById('recoveryCodeText').textContent;
+    try{
+      await navigator.clipboard.writeText(codigo);
+      showToast('Código copiado.');
+    }catch(err){
+      showToast('Não foi possível copiar automaticamente — selecione e copie manualmente.', 'error');
+    }
   });
   document.getElementById('adminResetCancel').addEventListener('click', () => {
     document.getElementById('adminResetModal').style.display = 'none';
