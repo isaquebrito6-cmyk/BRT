@@ -5,6 +5,18 @@ const PALETA = ['#f2b705', '#3fae5c', '#f2954a', '#e05a8a', '#8a6de0', '#4fa3e3'
 const MAX_TENTATIVAS = 5;
 const BLOQUEIO_MINUTOS = 15;
 
+function clienteInfo(request) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'desconhecido';
+  const ua = request.headers.get('User-Agent') || 'desconhecido';
+  return { ip, ua };
+}
+
+async function regHist(db, request, username, acao, tipo = 'dados') {
+  const { ip, ua } = clienteInfo(request);
+  await db.prepare('INSERT INTO historico (username, acao, tipo, ip, user_agent) VALUES (?, ?, ?, ?, ?)')
+    .bind(username, acao, tipo, ip, ua).run();
+}
+
 async function handleLogin(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const secret = env.SESSION_SECRET;
@@ -28,8 +40,7 @@ async function handleLogin(request, env) {
     const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(recoveryCode);
     await db.prepare('INSERT INTO users (username, password_hash, password_salt, role, recovery_hash, recovery_salt) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(username, hash, salt, 'admin', recoveryHash, recoverySalt).run();
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(username, 'Criou a conta de administrador (primeiro acesso)').run();
+    await regHist(db, request, username, 'Criou a conta de administrador (primeiro acesso)', 'seguranca');
     const token = await makeSessionToken({ username, role: 'admin' }, secret);
     return json({ token, username, role: 'admin', bootstrap: true, recoveryCode });
   }
@@ -49,12 +60,10 @@ async function handleLogin(request, env) {
       if (tentativas >= MAX_TENTATIVAS) {
         const bloqueadoAte = new Date(Date.now() + BLOQUEIO_MINUTOS * 60000).toISOString();
         await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = ? WHERE username = ?').bind(bloqueadoAte, username).run();
-        await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-          .bind(username, `Conta bloqueada por ${BLOQUEIO_MINUTOS} minutos após ${MAX_TENTATIVAS} tentativas de login erradas`).run();
+        await regHist(db, request, username, `Conta bloqueada por ${BLOQUEIO_MINUTOS} minutos após ${MAX_TENTATIVAS} tentativas de login erradas`, 'seguranca');
       } else {
         await db.prepare('UPDATE users SET failed_attempts = ? WHERE username = ?').bind(tentativas, username).run();
-        await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-          .bind(username, `Tentativa de login falhou (senha incorreta)`).run();
+        await regHist(db, request, username, 'Tentativa de login falhou (senha incorreta)', 'seguranca');
       }
     }
     return json({ error: 'invalid_credentials' }, 401);
@@ -62,7 +71,7 @@ async function handleLogin(request, env) {
 
   await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE username = ?').bind(username).run();
   const token = await makeSessionToken(user, secret);
-  await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)').bind(username, 'Entrou no sistema').run();
+  await regHist(db, request, username, 'Entrou no sistema', 'seguranca');
   return json({ token, username: user.username, role: user.role });
 }
 
@@ -76,7 +85,7 @@ async function handleData(request, env) {
     db.prepare('SELECT id, nome, notas, docs FROM colaboradores ORDER BY ordem ASC, nome ASC').all(),
     db.prepare('SELECT sigla, nome, descricao, cor, ordem FROM doc_types ORDER BY ordem ASC').all(),
     db.prepare('SELECT chave, valor FROM config').all(),
-    db.prepare('SELECT ts, username, acao FROM historico ORDER BY ts DESC LIMIT 300').all(),
+    db.prepare('SELECT ts, username, acao, tipo, ip, user_agent FROM historico ORDER BY ts DESC LIMIT 500').all(),
   ]);
   const colaboradores = colaboradoresRes.results.map(c => ({ id: c.id, nome: c.nome, notas: JSON.parse(c.notas), docs: JSON.parse(c.docs) }));
   const config = {};
@@ -109,8 +118,7 @@ async function handleColaborador(request, env, url) {
       await db.prepare("UPDATE colaboradores SET nome = ?, notas = ?, docs = ?, updated_at = datetime('now') WHERE id = ?")
         .bind(nome, JSON.stringify(notas), JSON.stringify(docs), id).run();
     }
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(session.username, (isNew ? 'Criou' : 'Editou') + ` colaborador "${nome}"`).run();
+    await regHist(db, request, session.username, (isNew ? 'Criou' : 'Editou') + ` colaborador "${nome}"`, 'dados');
     return json({ ok: true, id });
   }
 
@@ -120,8 +128,7 @@ async function handleColaborador(request, env, url) {
     const { results } = await db.prepare('SELECT nome FROM colaboradores WHERE id = ?').bind(id).all();
     if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
     await db.prepare('DELETE FROM colaboradores WHERE id = ?').bind(id).run();
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(session.username, `Excluiu colaborador "${results[0].nome}"`).run();
+    await regHist(db, request, session.username, `Excluiu colaborador "${results[0].nome}"`, 'dados');
     return json({ ok: true });
   }
 
@@ -147,8 +154,7 @@ async function handleDoctype(request, env, url) {
     const cor = PALETA[countRes[0].count % PALETA.length];
     await db.prepare('INSERT INTO doc_types (sigla, nome, descricao, cor, ordem) VALUES (?, ?, ?, ?, ?)')
       .bind(sigla, nome, nome, cor, maxRes[0].max + 1).run();
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(session.username, `Incluiu tipo de documento "${sigla}" (${nome})`).run();
+    await regHist(db, request, session.username, `Incluiu tipo de documento "${sigla}" (${nome})`, 'dados');
     return json({ ok: true, sigla, cor });
   }
 
@@ -165,8 +171,7 @@ async function handleDoctype(request, env, url) {
       return db.prepare('UPDATE colaboradores SET docs = ? WHERE id = ?').bind(JSON.stringify(docs), c.id);
     });
     if (stmts.length > 0) await db.batch(stmts);
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(session.username, `Excluiu tipo de documento "${sigla}"`).run();
+    await regHist(db, request, session.username, `Excluiu tipo de documento "${sigla}"`, 'dados');
     return json({ ok: true });
   }
 
@@ -184,8 +189,7 @@ async function handleConfig(request, env) {
   if (!chave) return json({ error: 'chave_obrigatoria' }, 400);
   await env.DB.prepare('INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT (chave) DO UPDATE SET valor = excluded.valor')
     .bind(chave, valor).run();
-  await env.DB.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-    .bind(session.username, `Alterou configuração "${chave}" para "${valor}"`).run();
+  await regHist(env.DB, request, session.username, `Alterou configuração "${chave}" para "${valor}"`, 'dados');
   return json({ ok: true });
 }
 
@@ -214,8 +218,7 @@ async function handleUsers(request, env, url) {
     const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(recoveryCode);
     await db.prepare('INSERT INTO users (username, password_hash, password_salt, role, recovery_hash, recovery_salt) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(username, hash, salt, role, recoveryHash, recoverySalt).run();
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(session.username, `Adicionou o usuário "${username}" (${role})`).run();
+    await regHist(db, request, session.username, `Adicionou o usuário "${username}" (${role})`, 'seguranca');
     return json({ ok: true, recoveryCode });
   }
 
@@ -228,8 +231,7 @@ async function handleUsers(request, env, url) {
     if (targetRes.length === 0) return json({ error: 'nao_encontrado' }, 404);
     if (targetRes[0].role === 'admin' && adminCountRes[0].count <= 1) return json({ error: 'nao_pode_remover_ultimo_admin' }, 400);
     await db.prepare('DELETE FROM users WHERE username = ?').bind(username).run();
-    await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-      .bind(session.username, `Removeu o usuário "${username}"`).run();
+    await regHist(db, request, session.username, `Removeu o usuário "${username}"`, 'seguranca');
     return json({ ok: true });
   }
 
@@ -250,6 +252,7 @@ async function handleResetPassword(request, env) {
   const { results } = await db.prepare('SELECT recovery_hash, recovery_salt FROM users WHERE username = ?').bind(username).all();
   const user = results[0];
   if (!user || !user.recovery_hash || !(await verifyPassword(recoveryCode, user.recovery_salt, user.recovery_hash))) {
+    await regHist(db, request, username, 'Tentativa de redefinir senha com código de recuperação inválido', 'seguranca');
     return json({ error: 'codigo_invalido' }, 401);
   }
 
@@ -258,8 +261,7 @@ async function handleResetPassword(request, env) {
   const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(novoCodigo);
   await db.prepare('UPDATE users SET password_hash = ?, password_salt = ?, recovery_hash = ?, recovery_salt = ? WHERE username = ?')
     .bind(hash, salt, recoveryHash, recoverySalt, username).run();
-  await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-    .bind(username, 'Redefiniu a própria senha usando o código de recuperação').run();
+  await regHist(db, request, username, 'Redefiniu a própria senha usando o código de recuperação', 'seguranca');
 
   return json({ ok: true, newRecoveryCode: novoCodigo });
 }
@@ -282,8 +284,7 @@ async function handleAdminResetPassword(request, env) {
 
   const { hash, salt } = await hashPassword(newPassword);
   await db.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE username = ?').bind(hash, salt, username).run();
-  await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
-    .bind(session.username, `Redefiniu a senha do usuário "${username}"`).run();
+  await regHist(db, request, session.username, `Redefiniu a senha do usuário "${username}"`, 'seguranca');
 
   return json({ ok: true });
 }

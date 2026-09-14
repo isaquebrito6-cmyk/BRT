@@ -407,11 +407,16 @@
     <div id="novoDocMsg" style="font-size:12px;color:var(--red);margin-top:8px;"></div>
   </div>
 
-  <div class="section-head"><span class="idx">04</span><h2>Histórico de Alterações</h2><span class="line"></span></div>
-  <p class="section-sub">Registro automático de cada vez que o sistema foi aberto e de cada criação, edição ou exclusão de colaborador neste navegador, com data e hora.</p>
+  <div class="section-head"><span class="idx">04</span><h2>Histórico</h2><span class="line"></span></div>
+  <p class="section-sub">Registro de cada login, tentativa de acesso, e de cada criação, edição ou exclusão de colaborador — com data, hora, quem fez e de onde.</p>
   <div class="panel" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:3px;padding:6px 18px 16px;">
-    <div style="display:flex;justify-content:flex-end;padding-top:10px;">
-      <button class="btn" id="exportHistCsvBtn">⬇ Exportar histórico (CSV)</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:10px;">
+      <select id="historicoFiltro" style="width:auto;">
+        <option value="todos">Todos os eventos</option>
+        <option value="dados">Só alterações de dados</option>
+        <option value="seguranca">Só eventos de segurança</option>
+      </select>
+      <button class="btn" id="exportHistCsvBtn">⬇ Exportar (CSV)</button>
     </div>
     <div id="historicoList" style="max-height:280px;overflow-y:auto;overflow-x:hidden;margin-top:4px;"></div>
   </div>
@@ -732,7 +737,7 @@ async function loadInitial(){
     if(data.config.avisoDias) CFG.avisoDias = parseInt(data.config.avisoDias, 10) || 30;
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
-  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao}));
+  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
   updateSaveIndicator('Conectado');
 }
 
@@ -750,7 +755,7 @@ async function refreshData(){
     if(data.config.avisoDias) CFG.avisoDias = parseInt(data.config.avisoDias, 10) || 30;
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
-  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao}));
+  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
   renderAll();
   renderHistorico();
   refreshDocFilterOptions();
@@ -770,29 +775,41 @@ function formatarDataHora(iso){
 function renderHistorico(){
   const list = document.getElementById('historicoList');
   if(!list) return;
-  if(HISTORICO.length === 0){
-    list.innerHTML = `<div class="empty-state">Nenhuma alteração registrada ainda.</div>`;
+  const filtroEl = document.getElementById('historicoFiltro');
+  const filtro = filtroEl ? filtroEl.value : 'todos';
+  const itens = filtro === 'todos' ? HISTORICO : HISTORICO.filter(h => h.tipo === filtro);
+  if(itens.length === 0){
+    list.innerHTML = `<div class="empty-state">Nenhum evento registrado ainda.</div>`;
     return;
   }
-  list.innerHTML = HISTORICO.map(h => `
+  list.innerHTML = itens.map(h => {
+    const ehSeguranca = h.tipo === 'seguranca';
+    const icone = ehSeguranca ? '🔒' : '📝';
+    return `
     <div class="alert-item" style="align-items:flex-start;">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);flex:none;width:120px;">${formatarDataHora(h.ts)}</span>
-      <span style="font-weight:600;color:var(--amber);flex:none;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(h.quem || '—')}</span>
+      <span title="${ehSeguranca ? 'Evento de segurança' : 'Alteração de dados'}" style="flex:none;width:18px;">${icone}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);flex:none;width:110px;">${formatarDataHora(h.ts)}</span>
+      <span style="font-weight:600;color:var(--amber);flex:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(h.quem || '—')}</span>
       <span style="flex:1;color:var(--text);">${escapeHTML(h.acao)}</span>
-    </div>`).join('');
+      ${h.ip ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-dim);flex:none;">${escapeHTML(h.ip)}</span>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function exportHistoricoCSV(){
-  const linhas = [['Data/hora','Usuário','Ação'].join(';')];
-  HISTORICO.forEach(h => {
-    linhas.push([formatarDataHora(h.ts), h.quem || '', h.acao].map(v => `"${String(v).replace(/"/g,'""')}"`).join(';'));
+  const filtroEl = document.getElementById('historicoFiltro');
+  const filtro = filtroEl ? filtroEl.value : 'todos';
+  const itens = filtro === 'todos' ? HISTORICO : HISTORICO.filter(h => h.tipo === filtro);
+  const linhas = [['Data/hora','Usuário','Tipo','Ação','IP'].join(';')];
+  itens.forEach(h => {
+    linhas.push([formatarDataHora(h.ts), h.quem || '', h.tipo === 'seguranca' ? 'Segurança' : 'Dados', h.acao, h.ip || ''].map(v => `"${String(v).replace(/"/g,'""')}"`).join(';'));
   });
   const csv = '\uFEFF' + linhas.join('\r\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `historico_alteracoes_${hojeISO()}.csv`;
+  a.download = `historico_${filtro}_${hojeISO()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1557,6 +1574,7 @@ async function iniciarApp(){
   document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
 
   document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
+  document.getElementById('historicoFiltro').addEventListener('change', renderHistorico);
 
   document.getElementById('addBtn').addEventListener('click', addNew);
   document.getElementById('searchInput').addEventListener('input', renderTable);
