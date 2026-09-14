@@ -2,6 +2,9 @@ import { hashPassword, verifyPassword, makeSessionToken, getSession, json, gener
 
 const PALETA = ['#f2b705', '#3fae5c', '#f2954a', '#e05a8a', '#8a6de0', '#4fa3e3', '#c94f4f', '#4fc9a8', '#c9a24f', '#7a8fd6'];
 
+const MAX_TENTATIVAS = 5;
+const BLOQUEIO_MINUTOS = 15;
+
 async function handleLogin(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const secret = env.SESSION_SECRET;
@@ -13,13 +16,13 @@ async function handleLogin(request, env) {
   const username = String(body.username || '').trim();
   const password = String(body.password || '');
   if (!username || !password) return json({ error: 'missing_credentials' }, 400);
-  if (password.length < 6) return json({ error: 'password_too_short' }, 400);
 
   const db = env.DB;
   const { results: countRows } = await db.prepare('SELECT COUNT(*) AS count FROM users').all();
   const count = countRows[0].count;
 
   if (count === 0) {
+    if (password.length < 8) return json({ error: 'password_too_short' }, 400);
     const { hash, salt } = await hashPassword(password);
     const recoveryCode = generateRecoveryCode();
     const { hash: recoveryHash, salt: recoverySalt } = await hashPassword(recoveryCode);
@@ -31,12 +34,33 @@ async function handleLogin(request, env) {
     return json({ token, username, role: 'admin', bootstrap: true, recoveryCode });
   }
 
-  const { results } = await db.prepare('SELECT username, password_hash, password_salt, role FROM users WHERE username = ?')
+  const { results } = await db.prepare('SELECT username, password_hash, password_salt, role, failed_attempts, locked_until FROM users WHERE username = ?')
     .bind(username).all();
   const user = results[0];
+
+  if (user && user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
+    const minutosRestantes = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60000);
+    return json({ error: 'conta_bloqueada', minutos: minutosRestantes }, 423);
+  }
+
   if (!user || !(await verifyPassword(password, user.password_salt, user.password_hash))) {
+    if (user) {
+      const tentativas = user.failed_attempts + 1;
+      if (tentativas >= MAX_TENTATIVAS) {
+        const bloqueadoAte = new Date(Date.now() + BLOQUEIO_MINUTOS * 60000).toISOString();
+        await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = ? WHERE username = ?').bind(bloqueadoAte, username).run();
+        await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
+          .bind(username, `Conta bloqueada por ${BLOQUEIO_MINUTOS} minutos após ${MAX_TENTATIVAS} tentativas de login erradas`).run();
+      } else {
+        await db.prepare('UPDATE users SET failed_attempts = ? WHERE username = ?').bind(tentativas, username).run();
+        await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)')
+          .bind(username, `Tentativa de login falhou (senha incorreta)`).run();
+      }
+    }
     return json({ error: 'invalid_credentials' }, 401);
   }
+
+  await db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE username = ?').bind(username).run();
   const token = await makeSessionToken(user, secret);
   await db.prepare('INSERT INTO historico (username, acao) VALUES (?, ?)').bind(username, 'Entrou no sistema').run();
   return json({ token, username: user.username, role: user.role });
@@ -182,7 +206,7 @@ async function handleUsers(request, env, url) {
     const username = String(body.username || '').trim();
     const password = String(body.password || '');
     const role = body.role === 'admin' ? 'admin' : 'editor';
-    if (!username || password.length < 6) return json({ error: 'dados_invalidos' }, 400);
+    if (!username || password.length < 8) return json({ error: 'dados_invalidos' }, 400);
     const { results: existing } = await db.prepare('SELECT username FROM users WHERE username = ?').bind(username).all();
     if (existing.length > 0) return json({ error: 'ja_existe' }, 409);
     const { hash, salt } = await hashPassword(password);
@@ -220,7 +244,7 @@ async function handleResetPassword(request, env) {
   const recoveryCode = String(body.recoveryCode || '').trim().toUpperCase();
   const newPassword = String(body.newPassword || '');
   if (!username || !recoveryCode || !newPassword) return json({ error: 'missing_fields' }, 400);
-  if (newPassword.length < 6) return json({ error: 'password_too_short' }, 400);
+  if (newPassword.length < 8) return json({ error: 'password_too_short' }, 400);
 
   const db = env.DB;
   const { results } = await db.prepare('SELECT recovery_hash, recovery_salt FROM users WHERE username = ?').bind(username).all();
@@ -250,7 +274,7 @@ async function handleAdminResetPassword(request, env) {
   try { body = await request.json(); } catch { return json({ error: 'invalid_body' }, 400); }
   const username = String(body.username || '').trim();
   const newPassword = String(body.newPassword || '');
-  if (!username || newPassword.length < 6) return json({ error: 'dados_invalidos' }, 400);
+  if (!username || newPassword.length < 8) return json({ error: 'dados_invalidos' }, 400);
 
   const db = env.DB;
   const { results } = await db.prepare('SELECT username FROM users WHERE username = ?').bind(username).all();

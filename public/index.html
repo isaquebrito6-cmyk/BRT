@@ -217,9 +217,14 @@
         <label>Código de recuperação</label>
         <input type="text" id="resetCode" placeholder="XXXX-XXXX-XXXX" style="font-family:'IBM Plex Mono',monospace;">
       </div>
-      <div class="field" style="margin-bottom:8px;">
-        <label>Nova senha (mín. 6 caracteres)</label>
+      <div class="field" style="margin-bottom:4px;">
+        <label>Nova senha (mín. 8 caracteres)</label>
         <input type="password" id="resetNewPassword">
+      </div>
+      <div id="resetNewPasswordMeter" style="margin-bottom:10px;"></div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="resetNewPasswordConfirm">
       </div>
       <div id="resetMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:12px;"></div>
       <button class="btn primary" id="resetBtn" style="width:100%;justify-content:center;">Redefinir senha</button>
@@ -246,9 +251,14 @@
   <div style="width:100%;max-width:360px;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
     <h2 style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;margin:0 0 4px;">Redefinir senha</h2>
     <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Usuário: <b id="adminResetTargetUser" style="color:var(--text);"></b></p>
-    <div class="field" style="margin-bottom:8px;">
-      <label>Nova senha (mín. 6 caracteres)</label>
+    <div class="field" style="margin-bottom:4px;">
+      <label>Nova senha (mín. 8 caracteres)</label>
       <input type="password" id="adminResetNewPassword">
+    </div>
+    <div id="adminResetNewPasswordMeter" style="margin-bottom:10px;"></div>
+    <div class="field" style="margin-bottom:8px;">
+      <label>Confirmar nova senha</label>
+      <input type="password" id="adminResetNewPasswordConfirm">
     </div>
     <div id="adminResetMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
     <div style="display:flex;gap:8px;">
@@ -267,14 +277,16 @@
     <div id="usersList" style="margin-bottom:20px;"></div>
     <div style="border-top:1px solid var(--line);padding-top:16px;">
       <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;">Adicionar novo usuário</p>
-      <div class="edit-grid" style="margin-bottom:10px;">
+      <div class="edit-grid" style="margin-bottom:4px;">
         <div class="field"><label>Usuário</label><input type="text" id="newUserUsername"></div>
-        <div class="field"><label>Senha (mín. 6 caracteres)</label><input type="password" id="newUserPassword"></div>
+        <div class="field"><label>Senha (mín. 8 caracteres)</label><input type="password" id="newUserPassword"></div>
+        <div class="field"><label>Confirmar senha</label><input type="password" id="newUserPasswordConfirm"></div>
         <div class="field">
           <label>Papel</label>
           <select id="newUserRole"><option value="editor">Editor (edita)</option><option value="admin">Administrador</option></select>
         </div>
       </div>
+      <div id="newUserPasswordMeter" style="margin-bottom:10px;"></div>
       <div id="newUserMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
       <button class="btn primary" id="addUserBtn">+ Adicionar usuário</button>
     </div>
@@ -560,6 +572,32 @@ function diasDoStatusGeral(e, sg){
   return melhor;
 }
 
+function avaliarForcaSenha(senha){
+  if(!senha) return {score: 0, label: '', cor: 'var(--line)'};
+  let score = 0;
+  if(senha.length >= 8) score++;
+  if(senha.length >= 12) score++;
+  if(/[a-z]/.test(senha) && /[A-Z]/.test(senha)) score++;
+  if(/[0-9]/.test(senha)) score++;
+  if(/[^A-Za-z0-9]/.test(senha)) score++;
+  if(score <= 1) return {score, label: 'Fraca', cor: 'var(--red)'};
+  if(score <= 3) return {score, label: 'Média', cor: 'var(--orange)'};
+  return {score, label: 'Forte', cor: 'var(--green)'};
+}
+
+function ligarMedidorForca(inputId, meterId){
+  const input = document.getElementById(inputId);
+  const meter = document.getElementById(meterId);
+  if(!input || !meter) return;
+  input.addEventListener('input', () => {
+    const senha = input.value;
+    if(!senha){ meter.innerHTML = ''; return; }
+    const {score, label, cor} = avaliarForcaSenha(senha);
+    const barras = [1,2,3,4,5].map(i => `<span style="flex:1;height:4px;border-radius:2px;background:${i <= score ? cor : 'var(--line)'};"></span>`).join('');
+    meter.innerHTML = `<div style="display:flex;gap:3px;margin-bottom:4px;">${barras}</div><span style="font-size:11px;color:${cor};font-weight:600;">${label}</span>`;
+  });
+}
+
 function escapeHTML(str){
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -601,6 +639,8 @@ function encerrarSessao(){
   AUTH_TOKEN = null;
   AUTH_USERNAME = null;
   AUTH_ROLE = null;
+  clearTimeout(_timerAvisoSessao);
+  clearTimeout(_timerFimSessao);
   try{ window.localStorage.removeItem('auth_token_v1'); }catch(err){ /* nada */ }
   mostrarTelaLogin();
 }
@@ -613,6 +653,7 @@ async function carregarSessaoSalva(){
     AUTH_TOKEN = saved.token;
     AUTH_USERNAME = saved.username;
     AUTH_ROLE = saved.role;
+    agendarAvisoDeSessao();
     return true;
   }catch(err){ return false; }
 }
@@ -623,6 +664,33 @@ function salvarSessao(){
   }catch(err){ /* nada */ }
 }
 
+let _timerAvisoSessao = null;
+let _timerFimSessao = null;
+
+function agendarAvisoDeSessao(){
+  clearTimeout(_timerAvisoSessao);
+  clearTimeout(_timerFimSessao);
+  if(!AUTH_TOKEN || !AUTH_TOKEN.includes('.')) return;
+  try{
+    const [corpo] = AUTH_TOKEN.split('.');
+    const payload = JSON.parse(atob(corpo.replace(/-/g,'+').replace(/_/g,'/')));
+    if(!payload.exp) return;
+    const msAteExpirar = payload.exp - Date.now();
+    const msAteAviso = msAteExpirar - 5 * 60 * 1000; // avisa 5 minutos antes
+    if(msAteAviso > 0){
+      _timerAvisoSessao = setTimeout(() => {
+        showToast('Sua sessão vai expirar em 5 minutos. Salve o que estiver fazendo e entre de novo se precisar.', 'error');
+      }, msAteAviso);
+    }
+    if(msAteExpirar > 0){
+      _timerFimSessao = setTimeout(() => {
+        showToast('Sua sessão expirou. Faça login novamente.', 'error');
+        encerrarSessao();
+      }, msAteExpirar);
+    }
+  }catch(err){ /* token em formato inesperado — ignora o agendamento */ }
+}
+
 async function fazerLogin(username, password){
   const res = await fetch('/api/login', {
     method: 'POST',
@@ -631,12 +699,15 @@ async function fazerLogin(username, password){
   });
   const data = await res.json().catch(() => ({}));
   if(!res.ok){
-    throw new Error(data.error || 'erro_desconhecido');
+    const err = new Error(data.error || 'erro_desconhecido');
+    err.minutos = data.minutos;
+    throw err;
   }
   AUTH_TOKEN = data.token;
   AUTH_USERNAME = data.username;
   AUTH_ROLE = data.role;
   salvarSessao();
+  agendarAvisoDeSessao();
   return data;
 }
 
@@ -1360,12 +1431,16 @@ async function tentarLogin(){
       mostrarCodigoRecuperacao(data.recoveryCode);
     }
   }catch(err){
-    const mapa = {
-      invalid_credentials: 'Usuário ou senha incorretos.',
-      password_too_short: 'A senha precisa ter pelo menos 6 caracteres.',
-      missing_credentials: 'Preencha usuário e senha.',
-    };
-    msgEl.textContent = mapa[err.message] || 'Não foi possível entrar. Tente novamente.';
+    if(err.message === 'conta_bloqueada'){
+      msgEl.textContent = `Conta bloqueada por muitas tentativas erradas. Tente de novo em ${err.minutos || 15} minuto(s), ou use "Esqueci minha senha".`;
+    } else {
+      const mapa = {
+        invalid_credentials: 'Usuário ou senha incorretos.',
+        password_too_short: 'A senha precisa ter pelo menos 8 caracteres.',
+        missing_credentials: 'Preencha usuário e senha.',
+      };
+      msgEl.textContent = mapa[err.message] || 'Não foi possível entrar. Tente novamente.';
+    }
   } finally {
     btn.disabled = false;
   }
@@ -1374,6 +1449,8 @@ async function tentarLogin(){
 function abrirModalRedefinirSenha(username){
   document.getElementById('adminResetTargetUser').textContent = username;
   document.getElementById('adminResetNewPassword').value = '';
+  document.getElementById('adminResetNewPasswordConfirm').value = '';
+  document.getElementById('adminResetNewPasswordMeter').innerHTML = '';
   document.getElementById('adminResetMsg').textContent = '';
   document.getElementById('adminResetModal').dataset.username = username;
   document.getElementById('adminResetModal').style.display = 'flex';
@@ -1395,10 +1472,12 @@ async function tentarResetSenha(){
   const username = document.getElementById('resetUsername').value.trim();
   const recoveryCode = document.getElementById('resetCode').value.trim();
   const newPassword = document.getElementById('resetNewPassword').value;
+  const confirmPassword = document.getElementById('resetNewPasswordConfirm').value;
   const msgEl = document.getElementById('resetMsg');
   msgEl.textContent = '';
   if(!username || !recoveryCode || !newPassword){ msgEl.textContent = 'Preencha todos os campos.'; return; }
-  if(newPassword.length < 6){ msgEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+  if(newPassword.length < 8){ msgEl.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+  if(newPassword !== confirmPassword){ msgEl.textContent = 'As senhas não coincidem.'; return; }
   const btn = document.getElementById('resetBtn');
   btn.disabled = true;
   try{
@@ -1409,7 +1488,7 @@ async function tentarResetSenha(){
     });
     const data = await res.json().catch(() => ({}));
     if(!res.ok){
-      const mapa = { codigo_invalido: 'Usuário ou código de recuperação incorretos.', password_too_short: 'A senha precisa ter pelo menos 6 caracteres.' };
+      const mapa = { codigo_invalido: 'Usuário ou código de recuperação incorretos.', password_too_short: 'A senha precisa ter pelo menos 8 caracteres.' };
       msgEl.textContent = mapa[data.error] || 'Não foi possível redefinir a senha.';
       return;
     }
@@ -1500,14 +1579,18 @@ async function iniciarApp(){
   document.getElementById('addUserBtn').addEventListener('click', async () => {
     const username = document.getElementById('newUserUsername').value.trim();
     const password = document.getElementById('newUserPassword').value;
+    const passwordConfirm = document.getElementById('newUserPasswordConfirm').value;
     const role = document.getElementById('newUserRole').value;
     const msgEl = document.getElementById('newUserMsg');
     msgEl.textContent = '';
-    if(!username || password.length < 6){ msgEl.textContent = 'Preencha usuário e senha (mín. 6 caracteres).'; return; }
+    if(!username || password.length < 8){ msgEl.textContent = 'Preencha usuário e senha (mín. 8 caracteres).'; return; }
+    if(password !== passwordConfirm){ msgEl.textContent = 'As senhas não coincidem.'; return; }
     try{
       const res = await apiFetch('/api/users', {method:'POST', body: JSON.stringify({username, password, role})});
       document.getElementById('newUserUsername').value = '';
       document.getElementById('newUserPassword').value = '';
+      document.getElementById('newUserPasswordConfirm').value = '';
+      document.getElementById('newUserPasswordMeter').innerHTML = '';
       await carregarUsuarios();
       showToast(`Usuário "${username}" adicionado.`);
       if(res.recoveryCode) mostrarCodigoRecuperacao(res.recoveryCode, username);
@@ -1568,6 +1651,10 @@ async function iniciarApp(){
 }
 
 async function init(){
+  ligarMedidorForca('resetNewPassword', 'resetNewPasswordMeter');
+  ligarMedidorForca('adminResetNewPassword', 'adminResetNewPasswordMeter');
+  ligarMedidorForca('newUserPassword', 'newUserPasswordMeter');
+
   document.getElementById('loginBtn').addEventListener('click', tentarLogin);
   document.getElementById('loginPassword').addEventListener('keydown', (ev) => {
     if(ev.key === 'Enter') tentarLogin();
@@ -1604,8 +1691,10 @@ async function init(){
   document.getElementById('adminResetConfirm').addEventListener('click', async () => {
     const username = document.getElementById('adminResetModal').dataset.username;
     const newPassword = document.getElementById('adminResetNewPassword').value;
+    const confirmPassword = document.getElementById('adminResetNewPasswordConfirm').value;
     const msgEl = document.getElementById('adminResetMsg');
-    if(newPassword.length < 6){ msgEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+    if(newPassword.length < 8){ msgEl.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; return; }
+    if(newPassword !== confirmPassword){ msgEl.textContent = 'As senhas não coincidem.'; return; }
     try{
       await apiFetch('/api/admin-reset-password', {method:'POST', body: JSON.stringify({username, newPassword})});
       document.getElementById('adminResetModal').style.display = 'none';
