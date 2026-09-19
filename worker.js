@@ -85,7 +85,7 @@ async function handleData(request, env) {
     db.prepare('SELECT id, nome, notas, docs FROM colaboradores ORDER BY ordem ASC, nome ASC').all(),
     db.prepare('SELECT sigla, nome, descricao, cor, ordem FROM doc_types ORDER BY ordem ASC').all(),
     db.prepare('SELECT chave, valor FROM config').all(),
-    db.prepare('SELECT ts, username, acao, tipo, ip, user_agent FROM historico ORDER BY ts DESC LIMIT 500').all(),
+    db.prepare('SELECT id, ts, username, acao, tipo, ip, user_agent FROM historico ORDER BY ts DESC LIMIT 500').all(),
   ]);
   const colaboradores = colaboradoresRes.results.map(c => ({ id: c.id, nome: c.nome, notas: JSON.parse(c.notas), docs: JSON.parse(c.docs) }));
   const config = {};
@@ -289,6 +289,32 @@ async function handleAdminResetPassword(request, env) {
   return json({ ok: true });
 }
 
+async function handleHistorico(request, env, url) {
+  const session = await getSession(request, env.SESSION_SECRET);
+  if (!session) return json({ error: 'unauthorized' }, 401);
+  if (session.role !== 'admin') return json({ error: 'somente_admin' }, 403);
+  if (request.method !== 'DELETE') return json({ error: 'method_not_allowed' }, 405);
+
+  const db = env.DB;
+  const idParam = url.searchParams.get('id');
+  const limpar = url.searchParams.get('limpar');
+
+  if (limpar === 'tudo') {
+    const { results: countRes } = await db.prepare('SELECT COUNT(*) AS count FROM historico').all();
+    await db.prepare('DELETE FROM historico').run();
+    await regHist(db, request, session.username, `Limpou todo o histórico (${countRes[0].count} registros apagados)`, 'seguranca');
+    return json({ ok: true });
+  }
+
+  if (!idParam) return json({ error: 'id_obrigatorio' }, 400);
+  const id = parseInt(idParam, 10);
+  const { results } = await db.prepare('SELECT id FROM historico WHERE id = ?').bind(id).all();
+  if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
+  await db.prepare('DELETE FROM historico WHERE id = ?').bind(id).run();
+  await regHist(db, request, session.username, `Apagou um registro do histórico (#${id})`, 'seguranca');
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -298,6 +324,7 @@ export default {
       if (p === '/api/reset-password') return await handleResetPassword(request, env);
       if (p === '/api/admin-reset-password') return await handleAdminResetPassword(request, env);
       if (p === '/api/data') return await handleData(request, env);
+      if (p === '/api/historico') return await handleHistorico(request, env, url);
       if (p === '/api/colaborador') return await handleColaborador(request, env, url);
       if (p === '/api/doctype') return await handleDoctype(request, env, url);
       if (p === '/api/config') return await handleConfig(request, env);

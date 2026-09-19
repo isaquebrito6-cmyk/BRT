@@ -416,7 +416,10 @@
         <option value="dados">Só alterações de dados</option>
         <option value="seguranca">Só eventos de segurança</option>
       </select>
-      <button class="btn" id="exportHistCsvBtn">⬇ Exportar (CSV)</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="exportHistCsvBtn">⬇ Exportar (CSV)</button>
+        <button class="btn ghost" id="clearHistBtn" style="display:none;color:var(--red);">🗑 Limpar tudo</button>
+      </div>
     </div>
     <div id="historicoList" style="max-height:280px;overflow-y:auto;overflow-x:hidden;margin-top:4px;"></div>
   </div>
@@ -737,7 +740,7 @@ async function loadInitial(){
     if(data.config.avisoDias) CFG.avisoDias = parseInt(data.config.avisoDias, 10) || 30;
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
-  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
+  HISTORICO = (data.historico || []).map(h => ({id: h.id, ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
   updateSaveIndicator('Conectado');
 }
 
@@ -755,7 +758,7 @@ async function refreshData(){
     if(data.config.avisoDias) CFG.avisoDias = parseInt(data.config.avisoDias, 10) || 30;
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
-  HISTORICO = (data.historico || []).map(h => ({ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
+  HISTORICO = (data.historico || []).map(h => ({id: h.id, ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
   renderAll();
   renderHistorico();
   refreshDocFilterOptions();
@@ -782,6 +785,7 @@ function renderHistorico(){
     list.innerHTML = `<div class="empty-state">Nenhum evento registrado ainda.</div>`;
     return;
   }
+  const souAdmin = AUTH_ROLE === 'admin';
   list.innerHTML = itens.map(h => {
     const ehSeguranca = h.tipo === 'seguranca';
     const icone = ehSeguranca ? '🔒' : '📝';
@@ -792,8 +796,23 @@ function renderHistorico(){
       <span style="font-weight:600;color:var(--amber);flex:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(h.quem || '—')}</span>
       <span style="flex:1;color:var(--text);">${escapeHTML(h.acao)}</span>
       ${h.ip ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-dim);flex:none;">${escapeHTML(h.ip)}</span>` : ''}
+      ${souAdmin ? `<button class="icon-btn del" data-del-historico="${h.id}" title="Apagar este registro" style="flex:none;">✕</button>` : ''}
     </div>`;
   }).join('');
+  if(souAdmin){
+    list.querySelectorAll('[data-del-historico]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Apagar este registro do histórico? Isso reduz o rastro de auditoria — a exclusão em si fica registrada.')) return;
+        try{
+          await apiFetch('/api/historico?id=' + encodeURIComponent(btn.dataset.delHistorico), {method:'DELETE'});
+          await refreshData();
+          showToast('Registro apagado.');
+        }catch(err){
+          showToast('Não foi possível apagar: ' + err.message, 'error');
+        }
+      });
+    });
+  }
 }
 
 function exportHistoricoCSV(){
@@ -1572,9 +1591,20 @@ async function iniciarApp(){
 
   document.getElementById('bannerText').textContent = 'Sessão ativa';
   document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
+  document.getElementById('clearHistBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
 
   document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
   document.getElementById('historicoFiltro').addEventListener('change', renderHistorico);
+  document.getElementById('clearHistBtn').addEventListener('click', async () => {
+    if(!confirm(`Apagar TODO o histórico (${HISTORICO.length} registros)? Essa ação não pode ser desfeita — o único rastro que sobra é o registro dessa própria limpeza.`)) return;
+    try{
+      await apiFetch('/api/historico?limpar=tudo', {method:'DELETE'});
+      await refreshData();
+      showToast('Histórico limpo.');
+    }catch(err){
+      showToast('Não foi possível limpar: ' + err.message, 'error');
+    }
+  });
 
   document.getElementById('addBtn').addEventListener('click', addNew);
   document.getElementById('searchInput').addEventListener('input', renderTable);
