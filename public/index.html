@@ -268,6 +268,28 @@
   </div>
 </div>
 
+<div id="colabTrashModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:220;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:560px;max-height:85vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;">🗑️ Lixeira de colaboradores</h2>
+      <button id="closeColabTrashModal" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Colaboradores excluídos ficam aqui — pode restaurar a qualquer momento, com os mesmos dados de antes.</p>
+    <div id="colabTrashList"></div>
+  </div>
+</div>
+
+<div id="trashModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:220;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:560px;max-height:85vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;">🗑️ Lixeira do histórico</h2>
+      <button id="closeTrashModal" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Registros apagados ficam aqui — pode restaurar a qualquer momento.</p>
+    <div id="trashList"></div>
+  </div>
+</div>
+
 <div id="usersModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;">
   <div style="width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -357,6 +379,7 @@
 
   <div class="toolbar">
     <button class="btn primary" id="addBtn">＋ Novo colaborador</button>
+    <button class="btn ghost" id="openColabTrashBtn">🗑️ Lixeira</button>
     <div class="search-box grow"><input id="searchInput" type="text" placeholder="Buscar colaborador... (atalho: /)"></div>
     <select id="statusFilter">
       <option value="">Status: todos</option>
@@ -418,7 +441,8 @@
       </select>
       <div style="display:flex;gap:8px;">
         <button class="btn" id="exportHistCsvBtn">⬇ Exportar (CSV)</button>
-        <button class="btn ghost" id="clearHistBtn" style="display:none;color:var(--red);">🗑 Limpar tudo</button>
+        <button class="btn ghost" id="clearHistBtn" style="display:none;color:var(--red);">🗑 Mover tudo p/ lixeira</button>
+        <button class="btn ghost" id="openTrashBtn" style="display:none;">🗑️ Lixeira</button>
       </div>
     </div>
     <div id="historicoList" style="max-height:280px;overflow-y:auto;overflow-x:hidden;margin-top:4px;"></div>
@@ -802,7 +826,7 @@ function renderHistorico(){
   if(souAdmin){
     list.querySelectorAll('[data-del-historico]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if(!confirm('Apagar este registro do histórico? Isso reduz o rastro de auditoria — a exclusão em si fica registrada.')) return;
+        if(!confirm('Mover este registro para a lixeira? Dá pra restaurar depois.')) return;
         try{
           await apiFetch('/api/historico?id=' + encodeURIComponent(btn.dataset.delHistorico), {method:'DELETE'});
           await refreshData();
@@ -1219,11 +1243,11 @@ function renderTable(){
       try{
         await apiFetch('/api/colaborador?id=' + encodeURIComponent(e.id), {method:'DELETE'});
         await refreshData();
-        showToast(`"${e.nome}" excluído.`, null, {
+        showToast(`"${e.nome}" movido para a lixeira.`, null, {
           label: 'Desfazer',
           onClick: async () => {
             try{
-              await apiFetch('/api/colaborador', {method:'POST', body: JSON.stringify({nome: e.nome, notas: e.notas, docs: e.docs})});
+              await apiFetch('/api/colaborador', {method:'PUT', body: JSON.stringify({id: e.id})});
               await refreshData();
               showToast('Exclusão desfeita.');
             }catch(err){
@@ -1541,6 +1565,69 @@ async function tentarResetSenha(){
   }
 }
 
+async function carregarLixeiraColaboradores(){
+  try{
+    const data = await apiFetch('/api/colaborador');
+    const list = document.getElementById('colabTrashList');
+    if(!data.lixeira || data.lixeira.length === 0){
+      list.innerHTML = `<div class="empty-state">A lixeira está vazia.</div>`;
+      return;
+    }
+    list.innerHTML = data.lixeira.map(c => `
+      <div class="alert-item" style="align-items:flex-start;">
+        <span style="font-weight:600;color:var(--text);flex:1;">${escapeHTML(c.nome)}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);flex:none;">${formatarDataHora(c.deletado_em)}</span>
+        <button class="btn ghost" data-restaurar-colaborador="${c.id}" style="flex:none;padding:4px 10px;font-size:12px;">↩ Restaurar</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-restaurar-colaborador]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try{
+          await apiFetch('/api/colaborador', {method:'PUT', body: JSON.stringify({id: btn.dataset.restaurarColaborador})});
+          await refreshData();
+          await carregarLixeiraColaboradores();
+          showToast('Colaborador restaurado.');
+        }catch(err){
+          showToast('Não foi possível restaurar: ' + err.message, 'error');
+        }
+      });
+    });
+  }catch(err){
+    showToast('Não foi possível carregar a lixeira: ' + err.message, 'error');
+  }
+}
+
+async function carregarLixeira(){
+  try{
+    const data = await apiFetch('/api/historico');
+    const list = document.getElementById('trashList');
+    if(!data.lixeira || data.lixeira.length === 0){
+      list.innerHTML = `<div class="empty-state">A lixeira está vazia.</div>`;
+      return;
+    }
+    list.innerHTML = data.lixeira.map(h => `
+      <div class="alert-item" style="align-items:flex-start;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);flex:none;width:110px;">${formatarDataHora(h.ts)}</span>
+        <span style="font-weight:600;color:var(--amber);flex:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(h.username || '—')}</span>
+        <span style="flex:1;color:var(--text);">${escapeHTML(h.acao)}</span>
+        <button class="btn ghost" data-restaurar-historico="${h.id}" style="flex:none;padding:4px 10px;font-size:12px;">↩ Restaurar</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-restaurar-historico]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try{
+          await apiFetch('/api/historico', {method:'POST', body: JSON.stringify({id: parseInt(btn.dataset.restaurarHistorico, 10)})});
+          await refreshData();
+          await carregarLixeira();
+          showToast('Registro restaurado.');
+        }catch(err){
+          showToast('Não foi possível restaurar: ' + err.message, 'error');
+        }
+      });
+    });
+  }catch(err){
+    showToast('Não foi possível carregar a lixeira: ' + err.message, 'error');
+  }
+}
+
 async function carregarUsuarios(){
   try{
     const data = await apiFetch('/api/users');
@@ -1592,18 +1679,33 @@ async function iniciarApp(){
   document.getElementById('bannerText').textContent = 'Sessão ativa';
   document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
   document.getElementById('clearHistBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
+  document.getElementById('openTrashBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
 
   document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
   document.getElementById('historicoFiltro').addEventListener('change', renderHistorico);
   document.getElementById('clearHistBtn').addEventListener('click', async () => {
-    if(!confirm(`Apagar TODO o histórico (${HISTORICO.length} registros)? Essa ação não pode ser desfeita — o único rastro que sobra é o registro dessa própria limpeza.`)) return;
+    if(!confirm(`Mover TODO o histórico (${HISTORICO.length} registros) para a lixeira? Dá pra restaurar depois, um por um.`)) return;
     try{
       await apiFetch('/api/historico?limpar=tudo', {method:'DELETE'});
       await refreshData();
-      showToast('Histórico limpo.');
+      showToast('Histórico movido para a lixeira.');
     }catch(err){
-      showToast('Não foi possível limpar: ' + err.message, 'error');
+      showToast('Não foi possível mover: ' + err.message, 'error');
     }
+  });
+  document.getElementById('openTrashBtn').addEventListener('click', () => {
+    document.getElementById('trashModal').style.display = 'flex';
+    carregarLixeira();
+  });
+  document.getElementById('closeTrashModal').addEventListener('click', () => {
+    document.getElementById('trashModal').style.display = 'none';
+  });
+  document.getElementById('openColabTrashBtn').addEventListener('click', () => {
+    document.getElementById('colabTrashModal').style.display = 'flex';
+    carregarLixeiraColaboradores();
+  });
+  document.getElementById('closeColabTrashModal').addEventListener('click', () => {
+    document.getElementById('colabTrashModal').style.display = 'none';
   });
 
   document.getElementById('addBtn').addEventListener('click', addNew);

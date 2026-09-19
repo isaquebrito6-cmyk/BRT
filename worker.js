@@ -82,10 +82,10 @@ async function handleData(request, env) {
 
   const db = env.DB;
   const [colaboradoresRes, docTypesRes, configRes, historicoRes] = await Promise.all([
-    db.prepare('SELECT id, nome, notas, docs FROM colaboradores ORDER BY ordem ASC, nome ASC').all(),
+    db.prepare('SELECT id, nome, notas, docs FROM colaboradores WHERE deletado_em IS NULL ORDER BY ordem ASC, nome ASC').all(),
     db.prepare('SELECT sigla, nome, descricao, cor, ordem FROM doc_types ORDER BY ordem ASC').all(),
     db.prepare('SELECT chave, valor FROM config').all(),
-    db.prepare('SELECT id, ts, username, acao, tipo, ip, user_agent FROM historico ORDER BY ts DESC LIMIT 500').all(),
+    db.prepare('SELECT id, ts, username, acao, tipo, ip, user_agent FROM historico WHERE deletado_em IS NULL ORDER BY ts DESC LIMIT 500').all(),
   ]);
   const colaboradores = colaboradoresRes.results.map(c => ({ id: c.id, nome: c.nome, notas: JSON.parse(c.notas), docs: JSON.parse(c.docs) }));
   const config = {};
@@ -97,6 +97,25 @@ async function handleColaborador(request, env, url) {
   const session = await getSession(request, env.SESSION_SECRET);
   if (!session) return json({ error: 'unauthorized' }, 401);
   const db = env.DB;
+
+  if (request.method === 'GET') {
+    // Lista a lixeira de colaboradores.
+    const { results } = await db.prepare("SELECT id, nome, docs, deletado_em FROM colaboradores WHERE deletado_em IS NOT NULL ORDER BY deletado_em DESC").all();
+    return json({ lixeira: results.map(c => ({ id: c.id, nome: c.nome, docs: JSON.parse(c.docs), deletado_em: c.deletado_em })) });
+  }
+
+  if (request.method === 'PUT') {
+    // Restaura um colaborador da lixeira.
+    let body;
+    try { body = await request.json(); } catch { return json({ error: 'invalid_body' }, 400); }
+    const id = String(body.id || '');
+    if (!id) return json({ error: 'id_obrigatorio' }, 400);
+    const { results } = await db.prepare('SELECT nome FROM colaboradores WHERE id = ? AND deletado_em IS NOT NULL').bind(id).all();
+    if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
+    await db.prepare('UPDATE colaboradores SET deletado_em = NULL WHERE id = ?').bind(id).run();
+    await regHist(db, request, session.username, `Restaurou colaborador "${results[0].nome}" da lixeira`, 'dados');
+    return json({ ok: true });
+  }
 
   if (request.method === 'POST') {
     let body;
@@ -125,10 +144,10 @@ async function handleColaborador(request, env, url) {
   if (request.method === 'DELETE') {
     const id = url.searchParams.get('id');
     if (!id) return json({ error: 'id_obrigatorio' }, 400);
-    const { results } = await db.prepare('SELECT nome FROM colaboradores WHERE id = ?').bind(id).all();
+    const { results } = await db.prepare('SELECT nome FROM colaboradores WHERE id = ? AND deletado_em IS NULL').bind(id).all();
     if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
-    await db.prepare('DELETE FROM colaboradores WHERE id = ?').bind(id).run();
-    await regHist(db, request, session.username, `Excluiu colaborador "${results[0].nome}"`, 'dados');
+    await db.prepare('UPDATE colaboradores SET deletado_em = ? WHERE id = ?').bind(new Date().toISOString(), id).run();
+    await regHist(db, request, session.username, `Moveu colaborador "${results[0].nome}" para a lixeira`, 'dados');
     return json({ ok: true });
   }
 
@@ -293,26 +312,49 @@ async function handleHistorico(request, env, url) {
   const session = await getSession(request, env.SESSION_SECRET);
   if (!session) return json({ error: 'unauthorized' }, 401);
   if (session.role !== 'admin') return json({ error: 'somente_admin' }, 403);
-  if (request.method !== 'DELETE') return json({ error: 'method_not_allowed' }, 405);
-
   const db = env.DB;
-  const idParam = url.searchParams.get('id');
-  const limpar = url.searchParams.get('limpar');
 
-  if (limpar === 'tudo') {
-    const { results: countRes } = await db.prepare('SELECT COUNT(*) AS count FROM historico').all();
-    await db.prepare('DELETE FROM historico').run();
-    await regHist(db, request, session.username, `Limpou todo o histórico (${countRes[0].count} registros apagados)`, 'seguranca');
+  if (request.method === 'GET') {
+    // Lista a lixeira: registros apagados, mais recentes primeiro.
+    const { results } = await db.prepare('SELECT id, ts, username, acao, tipo, ip, deletado_em FROM historico WHERE deletado_em IS NOT NULL ORDER BY deletado_em DESC LIMIT 300').all();
+    return json({ lixeira: results });
+  }
+
+  if (request.method === 'POST') {
+    // Restaura um registro apagado.
+    let body;
+    try { body = await request.json(); } catch { return json({ error: 'invalid_body' }, 400); }
+    const id = parseInt(body.id, 10);
+    if (!id) return json({ error: 'id_obrigatorio' }, 400);
+    const { results } = await db.prepare('SELECT id FROM historico WHERE id = ? AND deletado_em IS NOT NULL').bind(id).all();
+    if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
+    await db.prepare('UPDATE historico SET deletado_em = NULL WHERE id = ?').bind(id).run();
+    await regHist(db, request, session.username, `Restaurou um registro do histórico (#${id})`, 'seguranca');
     return json({ ok: true });
   }
 
-  if (!idParam) return json({ error: 'id_obrigatorio' }, 400);
-  const id = parseInt(idParam, 10);
-  const { results } = await db.prepare('SELECT id FROM historico WHERE id = ?').bind(id).all();
-  if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
-  await db.prepare('DELETE FROM historico WHERE id = ?').bind(id).run();
-  await regHist(db, request, session.username, `Apagou um registro do histórico (#${id})`, 'seguranca');
-  return json({ ok: true });
+  if (request.method === 'DELETE') {
+    const idParam = url.searchParams.get('id');
+    const limpar = url.searchParams.get('limpar');
+    const agora = new Date().toISOString();
+
+    if (limpar === 'tudo') {
+      const { results: countRes } = await db.prepare('SELECT COUNT(*) AS count FROM historico WHERE deletado_em IS NULL').all();
+      await db.prepare('UPDATE historico SET deletado_em = ? WHERE deletado_em IS NULL').bind(agora).run();
+      await regHist(db, request, session.username, `Moveu todo o histórico para a lixeira (${countRes[0].count} registros)`, 'seguranca');
+      return json({ ok: true });
+    }
+
+    if (!idParam) return json({ error: 'id_obrigatorio' }, 400);
+    const id = parseInt(idParam, 10);
+    const { results } = await db.prepare('SELECT id FROM historico WHERE id = ? AND deletado_em IS NULL').bind(id).all();
+    if (results.length === 0) return json({ error: 'nao_encontrado' }, 404);
+    await db.prepare('UPDATE historico SET deletado_em = ? WHERE id = ?').bind(agora, id).run();
+    await regHist(db, request, session.username, `Moveu um registro do histórico para a lixeira (#${id})`, 'seguranca');
+    return json({ ok: true });
+  }
+
+  return json({ error: 'method_not_allowed' }, 405);
 }
 
 export default {
