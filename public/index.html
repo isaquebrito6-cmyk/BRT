@@ -274,8 +274,9 @@
       <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;">🗑️ Lixeira de colaboradores</h2>
       <button id="closeColabTrashModal" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
     </div>
-    <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Colaboradores excluídos ficam aqui — pode restaurar a qualquer momento, com os mesmos dados de antes.</p>
-    <div id="colabTrashList"></div>
+    <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;">Colaboradores excluídos ficam aqui por até <b style="color:var(--text)">30 dias</b> — pode restaurar a qualquer momento, com os mesmos dados de antes. Depois de 30 dias, somem sozinhos.</p>
+    <div id="colabTrashList" style="margin-bottom:14px;"></div>
+    <button class="btn ghost" id="emptyColabTrashBtn" style="width:100%;justify-content:center;color:var(--red);display:none;">🗑 Esvaziar lixeira agora</button>
   </div>
 </div>
 
@@ -285,8 +286,9 @@
       <h2 style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;margin:0;">🗑️ Lixeira do histórico</h2>
       <button id="closeTrashModal" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
     </div>
-    <p style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Registros apagados ficam aqui — pode restaurar a qualquer momento.</p>
-    <div id="trashList"></div>
+    <p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;">Registros apagados ficam aqui por até <b style="color:var(--text)">30 dias</b> — pode restaurar a qualquer momento. Depois de 30 dias, somem sozinhos.</p>
+    <div id="trashList" style="margin-bottom:14px;"></div>
+    <button class="btn ghost" id="emptyTrashBtn" style="width:100%;justify-content:center;color:var(--red);">🗑 Esvaziar lixeira agora</button>
   </div>
 </div>
 
@@ -1706,6 +1708,27 @@ async function iniciarApp(){
   });
   document.getElementById('closeColabTrashModal').addEventListener('click', () => {
     document.getElementById('colabTrashModal').style.display = 'none';
+  });
+  document.getElementById('emptyColabTrashBtn').style.display = AUTH_ROLE === 'admin' ? 'flex' : 'none';
+  document.getElementById('emptyColabTrashBtn').addEventListener('click', async () => {
+    if(!confirm('Apagar DEFINITIVAMENTE tudo que está na lixeira de colaboradores? Essa ação não pode ser desfeita.')) return;
+    try{
+      await apiFetch('/api/colaborador?esvaziar=tudo', {method:'DELETE'});
+      await carregarLixeiraColaboradores();
+      showToast('Lixeira de colaboradores esvaziada.');
+    }catch(err){
+      showToast('Não foi possível esvaziar: ' + err.message, 'error');
+    }
+  });
+  document.getElementById('emptyTrashBtn').addEventListener('click', async () => {
+    if(!confirm('Apagar DEFINITIVAMENTE tudo que está na lixeira do histórico? Essa ação não pode ser desfeita.')) return;
+    try{
+      await apiFetch('/api/historico?esvaziar=tudo', {method:'DELETE'});
+      await carregarLixeira();
+      showToast('Lixeira do histórico esvaziada.');
+    }catch(err){
+      showToast('Não foi possível esvaziar: ' + err.message, 'error');
+    }
   });
 
   document.getElementById('addBtn').addEventListener('click', addNew);

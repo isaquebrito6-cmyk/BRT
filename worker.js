@@ -93,15 +93,28 @@ async function handleData(request, env) {
   return json({ colaboradores, docTypes: docTypesRes.results, config, historico: historicoRes.results, role: session.role, username: session.username });
 }
 
+const DIAS_RETENCAO_LIXEIRA = 30;
+
+function dataLimiteRetencao() {
+  return new Date(Date.now() - DIAS_RETENCAO_LIXEIRA * 24 * 60 * 60 * 1000).toISOString();
+}
+
+async function purgarLixeiraAntiga(db) {
+  const limite = dataLimiteRetencao();
+  await db.prepare('DELETE FROM colaboradores WHERE deletado_em IS NOT NULL AND deletado_em < ?').bind(limite).run();
+  await db.prepare('DELETE FROM historico WHERE deletado_em IS NOT NULL AND deletado_em < ?').bind(limite).run();
+}
+
 async function handleColaborador(request, env, url) {
   const session = await getSession(request, env.SESSION_SECRET);
   if (!session) return json({ error: 'unauthorized' }, 401);
   const db = env.DB;
 
   if (request.method === 'GET') {
-    // Lista a lixeira de colaboradores.
+    // Lista a lixeira de colaboradores (e aproveita pra apagar de vez o que passou do prazo de retenção).
+    await purgarLixeiraAntiga(db);
     const { results } = await db.prepare("SELECT id, nome, docs, deletado_em FROM colaboradores WHERE deletado_em IS NOT NULL ORDER BY deletado_em DESC").all();
-    return json({ lixeira: results.map(c => ({ id: c.id, nome: c.nome, docs: JSON.parse(c.docs), deletado_em: c.deletado_em })) });
+    return json({ lixeira: results.map(c => ({ id: c.id, nome: c.nome, docs: JSON.parse(c.docs), deletado_em: c.deletado_em })), diasRetencao: DIAS_RETENCAO_LIXEIRA });
   }
 
   if (request.method === 'PUT') {
@@ -142,6 +155,13 @@ async function handleColaborador(request, env, url) {
   }
 
   if (request.method === 'DELETE') {
+    if (url.searchParams.get('esvaziar') === 'tudo') {
+      if (session.role !== 'admin') return json({ error: 'somente_admin' }, 403);
+      const { results: countRes } = await db.prepare('SELECT COUNT(*) AS count FROM colaboradores WHERE deletado_em IS NOT NULL').all();
+      await db.prepare('DELETE FROM colaboradores WHERE deletado_em IS NOT NULL').run();
+      await regHist(db, request, session.username, `Esvaziou a lixeira de colaboradores (${countRes[0].count} apagados definitivamente)`, 'seguranca');
+      return json({ ok: true });
+    }
     const id = url.searchParams.get('id');
     if (!id) return json({ error: 'id_obrigatorio' }, 400);
     const { results } = await db.prepare('SELECT nome FROM colaboradores WHERE id = ? AND deletado_em IS NULL').bind(id).all();
@@ -315,9 +335,10 @@ async function handleHistorico(request, env, url) {
   const db = env.DB;
 
   if (request.method === 'GET') {
-    // Lista a lixeira: registros apagados, mais recentes primeiro.
+    // Lista a lixeira: registros apagados, mais recentes primeiro. Aproveita pra apagar de vez o que passou do prazo.
+    await purgarLixeiraAntiga(db);
     const { results } = await db.prepare('SELECT id, ts, username, acao, tipo, ip, deletado_em FROM historico WHERE deletado_em IS NOT NULL ORDER BY deletado_em DESC LIMIT 300').all();
-    return json({ lixeira: results });
+    return json({ lixeira: results, diasRetencao: DIAS_RETENCAO_LIXEIRA });
   }
 
   if (request.method === 'POST') {
@@ -336,7 +357,15 @@ async function handleHistorico(request, env, url) {
   if (request.method === 'DELETE') {
     const idParam = url.searchParams.get('id');
     const limpar = url.searchParams.get('limpar');
+    const esvaziar = url.searchParams.get('esvaziar');
     const agora = new Date().toISOString();
+
+    if (esvaziar === 'tudo') {
+      const { results: countRes } = await db.prepare('SELECT COUNT(*) AS count FROM historico WHERE deletado_em IS NOT NULL').all();
+      await db.prepare('DELETE FROM historico WHERE deletado_em IS NOT NULL').run();
+      await regHist(db, request, session.username, `Esvaziou a lixeira do histórico (${countRes[0].count} registros apagados definitivamente)`, 'seguranca');
+      return json({ ok: true });
+    }
 
     if (limpar === 'tudo') {
       const { results: countRes } = await db.prepare('SELECT COUNT(*) AS count FROM historico WHERE deletado_em IS NULL').all();
