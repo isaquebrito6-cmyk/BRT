@@ -309,6 +309,10 @@
           <label>Papel</label>
           <select id="newUserRole"><option value="editor">Editor (edita)</option><option value="admin">Administrador</option></select>
         </div>
+        <div class="field" id="newUserEmpresaBox">
+          <label>Empresa (só editor)</label>
+          <select id="newUserEmpresa"></select>
+        </div>
       </div>
       <div id="newUserPasswordMeter" style="margin-bottom:10px;"></div>
       <div id="newUserMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
@@ -324,6 +328,10 @@
       · SEGURANÇA DO TRABALHO
     </p>
     <h1 class="brand-title">Cadastro de Vencimentos<br><span class="thin">ASO &amp; NRs — Edição</span></h1>
+    <div id="seletorEmpresaBox" style="margin-top:10px;display:none;align-items:center;gap:8px;flex-wrap:wrap;">
+      <select id="seletorEmpresa" style="width:auto;font-size:12px;padding:5px 8px;"></select>
+      <button class="btn ghost" id="novaEmpresaBtn" style="padding:4px 10px;font-size:12px;">+ Nova empresa</button>
+    </div>
   </div>
   <div class="top-meta">
     HOJE: <b id="metaHoje">—</b><br>
@@ -331,6 +339,21 @@
     SALVAMENTO: <b id="metaSaveStatus">—</b>
   </div>
 </header>
+
+<div id="novaEmpresaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:260;align-items:center;justify-content:center;padding:20px;">
+  <div style="width:100%;max-width:360px;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;padding:24px 26px;">
+    <h2 style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;margin:0 0 16px;">+ Nova empresa</h2>
+    <div class="field" style="margin-bottom:8px;">
+      <label>Nome da empresa</label>
+      <input type="text" id="novaEmpresaNome">
+    </div>
+    <div id="novaEmpresaMsg" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" id="novaEmpresaCancelar" style="flex:1;justify-content:center;">Cancelar</button>
+      <button class="btn primary" id="novaEmpresaConfirmar" style="flex:1;justify-content:center;">Criar</button>
+    </div>
+  </div>
+</div>
 
 <main>
   <div class="banner" id="alertBanner" style="display:none;">
@@ -540,10 +563,18 @@ let sortKey = 'nome';
 let sortDir = 1;
 let openEditId = null;
 
+let EMPRESA_ATUAL = null;
+let EMPRESAS_DISPONIVEIS = [];
+
 async function apiFetch(path, options = {}){
   const headers = Object.assign({}, options.headers, AUTH_TOKEN ? {'Authorization': 'Bearer ' + AUTH_TOKEN} : {});
   if(options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-  const res = await fetch(path, Object.assign({}, options, {headers}));
+  let finalPath = path;
+  if(EMPRESA_ATUAL && EMPRESA_ATUAL.id && path.startsWith('/api/') && path !== '/api/login'){
+    const sep = path.includes('?') ? '&' : '?';
+    finalPath = `${path}${sep}empresa_id=${EMPRESA_ATUAL.id}`;
+  }
+  const res = await fetch(finalPath, Object.assign({}, options, {headers}));
   if(res.status === 401){
     encerrarSessao();
     throw new Error('sessao_expirada');
@@ -767,6 +798,8 @@ async function loadInitial(){
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
   HISTORICO = (data.historico || []).map(h => ({id: h.id, ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
+  EMPRESA_ATUAL = data.empresaAtual || null;
+  if(data.empresas) EMPRESAS_DISPONIVEIS = data.empresas;
   updateSaveIndicator('Conectado');
 }
 
@@ -785,9 +818,12 @@ async function refreshData(){
     if(data.config.empresa) CFG.empresa = data.config.empresa;
   }
   HISTORICO = (data.historico || []).map(h => ({id: h.id, ts: h.ts, quem: h.username, acao: h.acao, tipo: h.tipo || 'dados', ip: h.ip}));
+  EMPRESA_ATUAL = data.empresaAtual || null;
+  if(data.empresas) EMPRESAS_DISPONIVEIS = data.empresas;
   renderAll();
   renderHistorico();
   refreshDocFilterOptions();
+  renderSeletorEmpresa();
 }
 
 async function persistConfig(chave, valor){
@@ -1446,6 +1482,24 @@ function exportCSV(){
 }
 
 // ---------- Nome da empresa editável ----------
+function renderSeletorEmpresa(){
+  const box = document.getElementById('seletorEmpresaBox');
+  const sel = document.getElementById('seletorEmpresa');
+  if(AUTH_ROLE !== 'admin' || EMPRESAS_DISPONIVEIS.length === 0){
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'flex';
+  sel.innerHTML = EMPRESAS_DISPONIVEIS.map(e => `<option value="${e.id}" ${EMPRESA_ATUAL && e.id === EMPRESA_ATUAL.id ? 'selected' : ''}>${escapeHTML(e.nome)}</option>`).join('');
+}
+
+async function trocarEmpresa(empresaId){
+  EMPRESA_ATUAL = {id: parseInt(empresaId, 10)};
+  openEditId = null;
+  await refreshData();
+  showToast(`Mostrando dados de "${EMPRESA_ATUAL && EMPRESA_ATUAL.nome ? EMPRESA_ATUAL.nome : ''}".`);
+}
+
 function initEmpresaField(){
   const el = document.getElementById('empresaInput');
   if(!el) return;
@@ -1638,13 +1692,15 @@ async function carregarUsuarios(){
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">
         <div>
           <div style="font-weight:600;">${escapeHTML(u.username)}</div>
-          <div style="font-size:11px;color:var(--text-dim);">${u.role === 'admin' ? 'Administrador' : 'Editor'}</div>
+          <div style="font-size:11px;color:var(--text-dim);">${u.role === 'admin' ? 'Administrador · todas as empresas' : 'Editor · ' + escapeHTML(u.empresa_nome || '—')}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           <button class="btn ghost" data-reset-pass-user="${escapeHTML(u.username)}" style="padding:4px 10px;font-size:12px;">Redefinir senha</button>
           ${u.username !== AUTH_USERNAME ? `<button class="icon-btn del" data-remove-user="${escapeHTML(u.username)}" title="Remover">✕</button>` : '<span style="font-size:11px;color:var(--text-dim);">(você)</span>'}
         </div>
       </div>`).join('');
+    const empresaSel = document.getElementById('newUserEmpresa');
+    empresaSel.innerHTML = EMPRESAS_DISPONIVEIS.map(e => `<option value="${e.id}">${escapeHTML(e.nome)}</option>`).join('');
     list.querySelectorAll('[data-remove-user]').forEach(btn => {
       btn.addEventListener('click', async () => {
         if(!confirm(`Remover o usuário "${btn.dataset.removeUser}"?`)) return;
@@ -1670,6 +1726,7 @@ async function iniciarApp(){
   renderLegend();
   renderHistorico();
   initEmpresaField();
+  renderSeletorEmpresa();
   document.getElementById('avisoDiasInput').value = CFG.avisoDias;
   refreshDocFilterOptions();
   renderAll();
@@ -1682,6 +1739,29 @@ async function iniciarApp(){
   document.getElementById('manageUsersBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
   document.getElementById('clearHistBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
   document.getElementById('openTrashBtn').style.display = AUTH_ROLE === 'admin' ? 'inline-flex' : 'none';
+
+  document.getElementById('seletorEmpresa').addEventListener('change', (ev) => trocarEmpresa(ev.target.value));
+  document.getElementById('novaEmpresaBtn').addEventListener('click', () => {
+    document.getElementById('novaEmpresaNome').value = '';
+    document.getElementById('novaEmpresaMsg').textContent = '';
+    document.getElementById('novaEmpresaModal').style.display = 'flex';
+  });
+  document.getElementById('novaEmpresaCancelar').addEventListener('click', () => {
+    document.getElementById('novaEmpresaModal').style.display = 'none';
+  });
+  document.getElementById('novaEmpresaConfirmar').addEventListener('click', async () => {
+    const nome = document.getElementById('novaEmpresaNome').value.trim();
+    const msgEl = document.getElementById('novaEmpresaMsg');
+    if(!nome){ msgEl.textContent = 'Informe o nome da empresa.'; return; }
+    try{
+      const res = await apiFetch('/api/empresas', {method:'POST', body: JSON.stringify({nome})});
+      document.getElementById('novaEmpresaModal').style.display = 'none';
+      showToast(`Empresa "${nome}" criada.`);
+      await trocarEmpresa(res.id);
+    }catch(err){
+      msgEl.textContent = 'Não foi possível criar: ' + err.message;
+    }
+  });
 
   document.getElementById('exportHistCsvBtn').addEventListener('click', exportHistoricoCSV);
   document.getElementById('historicoFiltro').addEventListener('change', renderHistorico);
@@ -1749,17 +1829,22 @@ async function iniciarApp(){
   document.getElementById('closeUsersModal').addEventListener('click', () => {
     document.getElementById('usersModal').style.display = 'none';
   });
+  document.getElementById('newUserRole').addEventListener('change', (ev) => {
+    document.getElementById('newUserEmpresaBox').style.display = ev.target.value === 'editor' ? 'block' : 'none';
+  });
   document.getElementById('addUserBtn').addEventListener('click', async () => {
     const username = document.getElementById('newUserUsername').value.trim();
     const password = document.getElementById('newUserPassword').value;
     const passwordConfirm = document.getElementById('newUserPasswordConfirm').value;
     const role = document.getElementById('newUserRole').value;
+    const empresaId = document.getElementById('newUserEmpresa').value;
     const msgEl = document.getElementById('newUserMsg');
     msgEl.textContent = '';
     if(!username || password.length < 8){ msgEl.textContent = 'Preencha usuário e senha (mín. 8 caracteres).'; return; }
     if(password !== passwordConfirm){ msgEl.textContent = 'As senhas não coincidem.'; return; }
+    if(role === 'editor' && !empresaId){ msgEl.textContent = 'Escolha a empresa desse editor.'; return; }
     try{
-      const res = await apiFetch('/api/users', {method:'POST', body: JSON.stringify({username, password, role})});
+      const res = await apiFetch('/api/users', {method:'POST', body: JSON.stringify({username, password, role, empresaId: role === 'editor' ? parseInt(empresaId, 10) : null})});
       document.getElementById('newUserUsername').value = '';
       document.getElementById('newUserPassword').value = '';
       document.getElementById('newUserPasswordConfirm').value = '';
